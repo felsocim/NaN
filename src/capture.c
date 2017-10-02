@@ -59,12 +59,19 @@ void process_ethernet(const struct ether_header * header) {
 	
 	free(source); free(destination);
 	
-	//if(header->ether_type = ETHERTYPE_IP) {
-		//const struct ip * iph = (struct ip *) (header + sizeof(struct ether_header))
+	// Debug
+	printf("Proto = 0x%04X\n", header->ether_type);
+	
+	if(header->ether_type == 0x0008) { //IPv4
+		const struct iphdr * iph = (struct iphdr *) (header + sizeof(struct ether_header));
+		process_ip(iph);
+	}
 }
 
-//void process_ip(const struct ip * header) {
-	
+void process_ip(const struct iphdr * header) {
+	// For testing purposes only
+	printf("IPv%u -- IHL = %u\n", header->version, header->ihl);
+}
 
 void process_packet(u_char * args, const struct pcap_pkthdr * header, const u_char * packet) {
 	const struct ether_header * ethernet = (struct ether_header *) (packet);
