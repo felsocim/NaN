@@ -49,11 +49,22 @@ void process_ethernet(const struct ether_header * header) {
 	src = (struct ether_addr *) (header->ether_dhost);
 	dst = (struct ether_addr *) (header->ether_shost);
 	
+	char * source = malloc(16), * destination = malloc(16);
+	
+	source = strcpy(source, ether_ntoa(src));
+	destination = strcpy(destination, ether_ntoa(dst));	
+	
 	// For testing purposes only
-	printf("@SRC = %s\n", ether_ntoa(src));
-	printf("@DST = %s\n", ether_ntoa(dst));
-	//printf("ETYPE = %s\n", header->ether_type);
+	printf("Ethernet packet: @source = %s, @destination = %s, eq? %d\n", source, destination, (header->ether_dhost == header->ether_shost));
+	
+	free(source); free(destination);
+	
+	//if(header->ether_type = ETHERTYPE_IP) {
+		//const struct ip * iph = (struct ip *) (header + sizeof(struct ether_header))
 }
+
+//void process_ip(const struct ip * header) {
+	
 
 void process_packet(u_char * args, const struct pcap_pkthdr * header, const u_char * packet) {
 	const struct ether_header * ethernet = (struct ether_header *) (packet);
