@@ -1,22 +1,110 @@
 #include "../include/capture.h"
 
-char * help_message = "NaN help message";
-char * usage_message = "NaN usage message";
+char * help_message = "Network traffic analysis.\nUsage: %s -i <interface> | -o <trace dump> [-f <BFP filter>] -v <verbosity level> [-h]\n Option -h shows this help message.\nDeveloped by Marek Felsoci within studies project. Licensed under MIT License.\nNO WARRANTY! FOR EDUCATIONAL PURPOSES ONLY!\n";
+char * usage_message = "Arguments mismatch!\nUsage: %s -i <interface> | -o <trace dump> [-f <BFP filter>] -v <verbosity level> [-h]\n";
+
+pcap_t * capture = NULL;
+
+void finish(int signum) {
+	if(capture != NULL) {
+		printf("\nCapture halt.\n");
+		pcap_breakloop(capture);
+
+		return;
+	}
+	
+	printf("Closing without capture.");
+}
 
 int main(int argc, char ** argv)
 {
-	pcap_t * capture = get_online_capture("enp0s25", NULL);
+	char * interface = NULL, * trace = NULL, * filter = NULL;
+	int verbosity = 0, c = 0;
+	struct sigaction close;
+
+	close.sa_handler = finish;
+
+	if(sigaction(SIGINT, &close, NULL) != 0)
+		failwith("Failed to set close signal");
+
+	while((c = getopt(argc, argv, "i:o:f:v:h")) != EOF) {
+		switch(c) {
+			case 'i':
+				if (trace != NULL)
+					failwith("The -i and -o options can not be used simultaneously!");
+
+				interface = (char *) malloc(strlen(optarg) * sizeof(char));
+				interface = strcpy(interface, optarg);
+				break;
+			case 'o':
+				if (interface != NULL)
+					failwith("The -i and -o options can not be used simultaneously!");
+
+				trace = (char *) malloc(PATH_MAX * sizeof(char));
+
+				if(strlen(optarg) > PATH_MAX)
+					failwith("The input trace file name you've provided is too long! Check your operating system file name limitations.");
+
+				trace = strcpy(trace, optarg);
+				break;
+			case 'f':
+				filter = (char *) malloc(strlen(optarg) * sizeof(char));
+				filter = strcpy(filter, optarg);
+				break;
+			case 'v':
+				verbosity = atoi(optarg);
+
+				if(verbosity < 1 || verbosity > 3)
+					failwith("The choosen verbosity level is not supported! Please choose a value from 1 (least verbose) to 3 (most verbose).");
+				break;
+			case 'h':
+				if(interface != NULL)
+					free(interface);
+				if(trace != NULL)
+					free(trace);
+				if(filter != NULL)
+					free(filter);
+
+				usage(argv[0], EXIT_SUCCESS);
+			case '?':
+			default:
+				usage(argv[0], EXIT_FAILURE);
+		}
+	}
+
+	if((interface == NULL && trace == NULL) || verbosity == 0)
+		usage(argv[0], EXIT_FAILURE);
+
+	if(interface != NULL) { // Live capture
+		capture = get_online_capture(interface, filter);		
+	}
+
+	
+	if(trace != NULL) { // Offline capture
+		capture = get_offline_capture(trace);
+	}
+
 	switch(init_capture(capture, NB_PACKETS)) {
 		case 0:
 			printf("Capture successful\n");
-			return 0;
+			break;
 		case -1:
-			fprintf(stderr, "Error capturing packets!\n");
-			return -1;
-		case -2:
-			fprintf(stderr, "Loop breakout encountered. No packets processed!\n");
-			return -2;
+			if(interface != NULL)
+				free(interface);
+			if(trace != NULL)
+				free(trace);
+			if(filter != NULL)
+				free(filter);
+
+			failwith("Traffic capture failed");
 	}
 	
+	if(interface != NULL)
+		free(interface);
+	if(trace != NULL)
+		free(trace);
+	if(filter != NULL)
+		free(filter);
+
 	return 0;
 }
