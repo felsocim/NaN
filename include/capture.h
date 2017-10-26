@@ -4,9 +4,6 @@
 #define NB_PACKETS 0
 #define MAC_ADDR_LENGTH 16
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <pcap.h>
 #include <net/ethernet.h>
@@ -16,6 +13,7 @@
 #include "common.h"
 
 pcap_t * get_online_capture(char * device, char * filter);
+pcap_t * get_offline_capture(char * trace);
 void process_ip(const u_char * packet);
 void process_packet(u_char * args, const struct pcap_pkthdr * header, const u_char * packet);
 int init_capture(pcap_t * capture, int nb_packets);

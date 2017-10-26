@@ -44,6 +44,21 @@ pcap_t * get_online_capture(char * device, char * filter) {
 	return capture;
 }
 
+pcap_t * get_offline_capture(char * trace) {
+	char errbuf[PCAP_ERRBUF_SIZE];
+	
+	pcap_t * capture = pcap_open_offline(trace, errbuf);
+	if(capture == NULL) {
+		fprintf(stderr, "Could not open offline capture from trace file '%s': %s\n", trace, errbuf);
+		return NULL;
+	}
+	
+	// Debug
+	printf("Capture created from file: %s\n", trace);
+	
+	return capture;
+}
+
 void process_ip(const u_char * packet) {
 	// IP header parsing
 	const struct ip * header = (struct ip *) (packet + sizeof(struct ether_header));
