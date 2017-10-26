@@ -2,16 +2,19 @@
 
 void failwith(const char * message) {
 	if(message != NULL) {
-		perror(message);
+		if(errno != 0)
+			perror(message);
+		else
+			fprintf(stderr, message);
 	} else {
-		perror("Error");
+		fprintf(stderr, "Unknown error occurred!");
 	}
 	exit(EXIT_FAILURE);
 }
 
 void usage(const char * arg_0, const int exit_code) {
-	const char * app_name = strrchr(arg_0, '/');
-	if(exit_code != 0) {
+	const char * app_name = strrchr(arg_0, '/') + 1;
+	if(exit_code != EXIT_SUCCESS) {
 		fprintf(stderr, usage_message, app_name);
     } else {
         fprintf(stdout, help_message, app_name);
