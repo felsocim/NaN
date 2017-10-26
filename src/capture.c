@@ -44,35 +44,59 @@ pcap_t * get_online_capture(char * device, char * filter) {
 	return capture;
 }
 
-void process_ethernet(const u_char * packet) {
-	const struct ether_header * header = (struct ether_header *) (packet);
-	const struct ether_addr * src, *dst;
-	src = (struct ether_addr *) (header->ether_dhost);
-	dst = (struct ether_addr *) (header->ether_shost);
+void process_ip(const u_char * packet) {
+	// IP header parsing
+	const struct ip * header = (struct ip *) (packet + sizeof(struct ether_header));
 	
-	char * source = malloc(16), * destination = malloc(16);
-	
-	source = strcpy(source, ether_ntoa(src));
-	destination = strcpy(destination, ether_ntoa(dst));	
-	
-	// For testing purposes only
-	//printf("Ethernet packet: @source = %s, @destination = %s, eq? %d\n", source, destination, (header->ether_dhost == header->ether_shost));
-	
-	free(source); free(destination);
-	
-	if(ntohs(header->ether_type) == ETHERTYPE_IP) { //IPv4
-		process_ip(packet);
+	// IP packet information extraction
+	char * source = NULL, * destination = NULL;
+	switch(header->ip_v) {
+		case 4:
+			source = malloc(INET_ADDRSTRLEN);
+			destination = malloc(INET_ADDRSTRLEN);
+
+			if(inet_ntop(AF_INET, &header->ip_src, source, INET_ADDRSTRLEN) == NULL)
+				failwith("Failed to convert source IP address to string");
+			if(inet_ntop(AF_INET, &header->ip_dst, destination, INET_ADDRSTRLEN) == NULL)
+				failwith("Failed to convert destination IP address to string");
+
+			printf("IP from %s to %s\n", source, destination);
+
+			free(source);
+			free(destination);			
+			break;
+		default:
+			break;
 	}
 }
 
-void process_ip(const u_char * packet) {
-	// For testing purposes only
-	const struct ip * header = (struct ip *) (packet + sizeof(struct ether_header));
-	printf("IPv%u -- IHL = %u\n", header->ip_v, header->ip_hl);
-}
-
 void process_packet(u_char * args, const struct pcap_pkthdr * header, const u_char * packet) {
-	process_ethernet(packet);
+	// Ethernet header parsing
+	const struct ether_header * ethernet = (struct ether_header *) (packet);
+	const struct ether_addr * src = (struct ether_addr *) (ethernet->ether_shost);
+	const struct ether_addr * dst = (struct ether_addr *) (ethernet->ether_dhost);
+	
+	// Ethernet packet information processing
+	char * source = malloc(MAC_ADDR_LENGTH);
+	char * destination = malloc(MAC_ADDR_LENGTH);
+
+	source = strcpy(source, ether_ntoa(src));
+	destination = strcpy(destination, ether_ntoa(dst));	
+
+	// Print out ethernet packet information
+	// printf("Ethernet: from %s to %s\n", source, destination);
+
+	switch(ntohs(ethernet->ether_type)) {
+		case ETHERTYPE_IP: //IP packet
+			process_ip(packet);
+			break;
+		default:
+			break;
+	}
+
+	// Memory free
+	free(source); 
+	free(destination);
 }
 
 int init_capture(pcap_t * capture, int nb_packets) {
