@@ -1,8 +1,11 @@
 #include "../include/capture.h"
 
+char * help_message = "NaN help message";
+char * usage_message = "NaN usage message";
+
 int main(int argc, char ** argv)
 {
-	pcap_t * capture = get_online_capture("eth1", NULL);
+	pcap_t * capture = get_online_capture("enp0s25", NULL);
 	switch(init_capture(capture, NB_PACKETS)) {
 		case 0:
 			printf("Capture successful\n");
