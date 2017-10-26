@@ -44,7 +44,8 @@ pcap_t * get_online_capture(char * device, char * filter) {
 	return capture;
 }
 
-void process_ethernet(const struct ether_header * header) {
+void process_ethernet(const u_char * packet) {
+	const struct ether_header * header = (struct ether_header *) (packet);
 	const struct ether_addr * src, *dst;
 	src = (struct ether_addr *) (header->ether_dhost);
 	dst = (struct ether_addr *) (header->ether_shost);
@@ -55,27 +56,23 @@ void process_ethernet(const struct ether_header * header) {
 	destination = strcpy(destination, ether_ntoa(dst));	
 	
 	// For testing purposes only
-	printf("Ethernet packet: @source = %s, @destination = %s, eq? %d\n", source, destination, (header->ether_dhost == header->ether_shost));
+	//printf("Ethernet packet: @source = %s, @destination = %s, eq? %d\n", source, destination, (header->ether_dhost == header->ether_shost));
 	
 	free(source); free(destination);
 	
-	// Debug
-	printf("Proto = 0x%04X\n", header->ether_type);
-	
-	if(header->ether_type == 0x0008) { //IPv4
-		const struct iphdr * iph = (struct iphdr *) (header + sizeof(struct ether_header));
-		process_ip(iph);
+	if(ntohs(header->ether_type) == ETHERTYPE_IP) { //IPv4
+		process_ip(packet);
 	}
 }
 
-void process_ip(const struct iphdr * header) {
+void process_ip(const u_char * packet) {
 	// For testing purposes only
-	printf("IPv%u -- IHL = %u\n", header->version, header->ihl);
+	const struct ip * header = (struct ip *) (packet + sizeof(struct ether_header));
+	printf("IPv%u -- IHL = %u\n", header->ip_v, header->ip_hl);
 }
 
 void process_packet(u_char * args, const struct pcap_pkthdr * header, const u_char * packet) {
-	const struct ether_header * ethernet = (struct ether_header *) (packet);
-	process_ethernet(ethernet);
+	process_ethernet(packet);
 }
 
 int init_capture(pcap_t * capture, int nb_packets) {
