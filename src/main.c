@@ -1,4 +1,4 @@
-#include "../include/capture.h"
+#include "../include/main.h"
 
 char * help_message = "Network traffic analysis.\nUsage: %s -i <interface> | -o <trace dump> [-f <BFP filter>] -v <verbosity level> [-h]\n Option -h shows this help message.\nDeveloped by Marek Felsoci within studies project. Licensed under MIT License.\nNO WARRANTY! FOR EDUCATIONAL PURPOSES ONLY!\n";
 char * usage_message = "Arguments mismatch!\nUsage: %s -i <interface> | -o <trace dump> [-f <BFP filter>] -v <verbosity level> [-h]\n";
@@ -55,7 +55,7 @@ int main(int argc, char ** argv)
 			case 'v':
 				verbosity = (u_char) optarg[0];
 
-				if(verbosity < VL_LOW || verbosity > VL_HIGH)
+				if(verbosity < VERBOSITY_LOW || verbosity > VERBOSITY_HIGH)
 					failwith("The choosen verbosity level is not supported! Please choose a value from 1 (least verbose) to 3 (most verbose).");
 				break;
 			case 'h':
@@ -86,7 +86,7 @@ int main(int argc, char ** argv)
 	}
 
   if(capture != NULL) {
-	  switch(init_capture(capture, NB_PACKETS, verbosity)) {
+	  switch(init_capture(capture, NUMBER_OF_PACKETS, verbosity)) {
 		  case 0:
 			  printf("Capture successful\n");
 			  break;

@@ -32,7 +32,7 @@ pcap_t * get_online_capture(char * device, char * filter) {
 		return NULL;
 	}
 
-	pcap_t * capture = pcap_open_live(dev, MAX_SNAPLEN, 0, 0, errbuf);
+	pcap_t * capture = pcap_open_live(dev, MAX_SNAPSHOT_LENGTH, 0, 0, errbuf);
 	if(capture == NULL) {
 		fprintf(stderr, "Could not open live capture on device '%s': %s\n", dev, errbuf);
 		return NULL;
@@ -93,8 +93,8 @@ void process_packet(u_char * args, const struct pcap_pkthdr * header, const u_ch
 	const struct ether_addr * dst = (struct ether_addr *) (ethernet->ether_dhost);
 
 	// Ethernet packet information processing
-	char * source = malloc(MAC_ADDR_LENGTH);
-	char * destination = malloc(MAC_ADDR_LENGTH);
+	char * source = malloc(MAC_ADDRESS_LENGTH);
+	char * destination = malloc(MAC_ADDRESS_LENGTH);
 
 	source = strcpy(source, ether_ntoa(src));
 	destination = strcpy(destination, ether_ntoa(dst));

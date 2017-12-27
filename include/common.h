@@ -6,8 +6,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-#include <signal.h>
+#include <unistd.h>
 
 extern char * help_message;
 extern char * usage_message;
