@@ -84,20 +84,22 @@ int main(int argc, char ** argv)
 		capture = get_offline_capture(trace);
 	}
 
-	switch(init_capture(capture, NB_PACKETS)) {
-		case 0:
-			printf("Capture successful\n");
-			break;
-		case -1:
-			if(interface != NULL)
-				free(interface);
-			if(trace != NULL)
-				free(trace);
-			if(filter != NULL)
-				free(filter);
+  if(capture != NULL) {
+	  switch(init_capture(capture, NB_PACKETS)) {
+		  case 0:
+			  printf("Capture successful\n");
+			  break;
+		  case -1:
+			  if(interface != NULL)
+				  free(interface);
+			  if(trace != NULL)
+				  free(trace);
+			  if(filter != NULL)
+				  free(filter);
 
-			failwith("Traffic capture failed");
-	}
+			  failwith("Traffic capture failed");
+	  }
+  }
 	
 	if(interface != NULL)
 		free(interface);
