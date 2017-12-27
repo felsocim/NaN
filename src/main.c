@@ -12,14 +12,15 @@ void finish(int signum) {
 
 		return;
 	}
-	
+
 	printf("Closing without capture.");
 }
 
 int main(int argc, char ** argv)
 {
 	char * interface = NULL, * trace = NULL, * filter = NULL;
-	int verbosity = 0, c = 0;
+	u_char verbosity = 0;
+  int c = 0;
 	struct sigaction close;
 
 	close.sa_handler = finish;
@@ -52,9 +53,9 @@ int main(int argc, char ** argv)
 				filter = strcpy(filter, optarg);
 				break;
 			case 'v':
-				verbosity = atoi(optarg);
+				verbosity = (u_char) optarg[0];
 
-				if(verbosity < 1 || verbosity > 3)
+				if(verbosity < VL_LOW || verbosity > VL_HIGH)
 					failwith("The choosen verbosity level is not supported! Please choose a value from 1 (least verbose) to 3 (most verbose).");
 				break;
 			case 'h':
@@ -76,16 +77,16 @@ int main(int argc, char ** argv)
 		usage(argv[0], EXIT_FAILURE);
 
 	if(interface != NULL) { // Live capture
-		capture = get_online_capture(interface, filter);		
+		capture = get_online_capture(interface, filter);
 	}
 
-	
+
 	if(trace != NULL) { // Offline capture
 		capture = get_offline_capture(trace);
 	}
 
   if(capture != NULL) {
-	  switch(init_capture(capture, NB_PACKETS)) {
+	  switch(init_capture(capture, NB_PACKETS, verbosity)) {
 		  case 0:
 			  printf("Capture successful\n");
 			  break;
@@ -100,7 +101,7 @@ int main(int argc, char ** argv)
 			  failwith("Traffic capture failed");
 	  }
   }
-	
+
 	if(interface != NULL)
 		free(interface);
 	if(trace != NULL)
