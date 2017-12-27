@@ -37,9 +37,10 @@ pcap_t * get_online_capture(char * device, char * filter) {
 		fprintf(stderr, "Could not open live capture on device '%s': %s\n", dev, errbuf);
 		return NULL;
 	}
-	
-	// Debug
+
+#if DEBUG
 	printf("Capture created for device: %s\n", dev);
+#endif
 	
 	return capture;
 }

@@ -1,5 +1,6 @@
 #ifndef __COMMON_H
 #define __COMMON_H
+#define DEBUG 1
 
 #include <stdio.h>
 #include <errno.h>
