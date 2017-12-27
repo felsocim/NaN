@@ -76,7 +76,7 @@ int main(int argc, char ** argv)
 	if((interface == NULL && trace == NULL) || verbosity == 0)
 		usage(argv[0], EXIT_FAILURE);
 
-	if(interface != NULL) { // Live capture
+	if(interface != NULL) { // Live capture (TODO: condition may be not neccessary if we wanna be able to choose the default interface)
 		capture = get_online_capture(interface, filter);
 	}
 
