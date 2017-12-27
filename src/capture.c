@@ -1,7 +1,7 @@
 #include "../include/capture.h"
 
 pcap_t * get_online_capture(char * device, char * filter) {
-	char * dev;
+	char * dev = NULL;
 	char errbuf[PCAP_ERRBUF_SIZE];
 	
 	if(device == NULL) {
