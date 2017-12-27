@@ -5,9 +5,9 @@ void failwith(const char * message) {
 		if(errno != 0)
 			perror(message);
 		else
-			fprintf(stderr, message);
+			fprintf(stderr, "%s\n", message);
 	} else {
-		fprintf(stderr, "Unknown error occurred!");
+		fprintf(stderr, "%s\n", "Unknown error occurred!");
 	}
 	exit(EXIT_FAILURE);
 }
