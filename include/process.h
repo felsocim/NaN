@@ -2,7 +2,6 @@
 #define __PROCESS_H
 
 #include <net/ethernet.h>
-#include <netinet/ether.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 

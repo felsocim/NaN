@@ -91,7 +91,7 @@ void got_packet(u_char * args, const struct pcap_pkthdr * header, const u_char *
 
 int init_capture(pcap_t * capture, int nb_packets, u_char verbosity) {
 #if DEBUG == 1
-	printf("Starting pcap loop with verbosity level set to %u\n", verbosity);
+	printf("Starting pcap loop with verbosity level set to %c\n", verbosity);
 #endif
 	return pcap_loop(capture, nb_packets, got_packet, &verbosity);
 }

@@ -7,6 +7,8 @@
 #define VERBOSITY_MEDIUM 0x32
 #define VERBOSITY_HIGH 0x33
 
+#include <net/ethernet.h>
+#include <netinet/ether.h>
 #include <pcap.h>
 
 #include "common.h"
