@@ -2,12 +2,10 @@
 #define __CAPTURE_H
 
 #define MAX_SNAPSHOT_LENGTH 1600
+#define MAX_TIMESTAMP_LENGTH 64
 #define MAC_ADDRESS_LENGTH 16
-#define VERBOSITY_LOW 0x31
-#define VERBOSITY_MEDIUM 0x32
-#define VERBOSITY_HIGH 0x33
 
-#include <net/ethernet.h>
+#include <time.h>
 #include <netinet/ether.h>
 #include <pcap.h>
 

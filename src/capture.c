@@ -63,30 +63,82 @@ pcap_t * get_offline_capture(char * trace) {
 void got_packet(u_char * args, const struct pcap_pkthdr * header, const u_char * packet) {
 	// Ethernet header parsing
 	const struct ether_header * ethernet = (struct ether_header *) (packet);
-	const struct ether_addr * src = (struct ether_addr *) (ethernet->ether_shost);
-	const struct ether_addr * dst = (struct ether_addr *) (ethernet->ether_dhost);
+  char * source = NULL, * destination = NULL;
 
-	// Ethernet packet information processing
-	char * source = malloc(MAC_ADDRESS_LENGTH);
-	char * destination = malloc(MAC_ADDRESS_LENGTH);
+  if(*args > VERBOSITY_LOW) {
+    const struct ether_addr * src = (struct ether_addr *) (ethernet->ether_shost);
+  	const struct ether_addr * dst = (struct ether_addr *) (ethernet->ether_dhost);
 
-	source = strcpy(source, ether_ntoa(src));
-	destination = strcpy(destination, ether_ntoa(dst));
+  	// Ethernet packet information processing
+  	source = (char *) malloc((MAC_ADDRESS_LENGTH + 1) * sizeof(char));
+  	destination = (char *) malloc((MAC_ADDRESS_LENGTH + 1) * sizeof(char));
 
-	// Print out ethernet packet information
-	// printf("Ethernet: from %s to %s\n", source, destination);
+    if(source == NULL)
+      failwith("Failed to reserve memory for MAC source address");
 
+    if(destination == NULL)
+      failwith("Failed to reserve memory for MAC destination address");
+
+  	source = strcpy(source, ether_ntoa(src));
+  	destination = strcpy(destination, ether_ntoa(dst));
+  }
+
+  // Extract frame's timestamp
+  struct tm * timestamp = localtime(&header->ts.tv_sec);
+
+  if(timestamp == NULL)
+    failwith("Failed to extract date/time information from time value structure");
+
+  char * timestring = (char *) malloc(MAX_TIMESTAMP_LENGTH * sizeof(char));
+  char * datetime = (char *) malloc(MAX_TIMESTAMP_LENGTH * sizeof(char));
+
+  if(timestring == NULL)
+    failwith("Failed to reserve memory for timestamp string");
+
+  if(datetime == NULL)
+    failwith("Failed to reserve memory for final date/time string");
+
+  size_t r_code = strftime(timestring, MAX_TIMESTAMP_LENGTH, "%d/%m/%Y %H:%M:%S", timestamp);
+
+  if(r_code < 1 || r_code >= MAX_TIMESTAMP_LENGTH)
+    failwith("Failed to format time stamp to human readable string");
+
+  r_code = snprintf(datetime, MAX_TIMESTAMP_LENGTH, "%s.%06ld", timestring, header->ts.tv_usec);
+
+  if(r_code < 1 || r_code >= MAX_TIMESTAMP_LENGTH)
+    failwith("Failed to increase timestamp string's precision");
+
+	// Print ethernet packet information
+	switch(*args) {
+    case VERBOSITY_LOW:
+      printf("%s ", datetime);
+      break;
+    case VERBOSITY_MEDIUM:
+      printf("%s:\nETH %s > %s\n", datetime, source, destination);
+      break;
+    case VERBOSITY_HIGH:
+      printf("%s \"Ethernet frame\" from %s to %s\n", datetime, source, destination);
+      break;
+    default:
+      failwith("Unknown verbosity level detected");
+  }
+
+  // Used memory free
+  if(*args > VERBOSITY_LOW) {
+    free(source);
+  	free(destination);
+  }
+
+  free(timestring);
+
+  // Process overlying protocols' headers
 	switch(ntohs(ethernet->ether_type)) {
-		case ETHERTYPE_IP: //IP packet
-			process_ip(packet);
+		case ETHERTYPE_IP: //IPv4
+			process_ipv4(packet, *args);
 			break;
 		default:
 			break;
 	}
-
-	// Memory free
-	free(source);
-	free(destination);
 }
 
 int init_capture(pcap_t * capture, int nb_packets, u_char verbosity) {
