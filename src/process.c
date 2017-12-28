@@ -1,27 +1,61 @@
 #include "../include/process.h"
 
-void process_ip(const u_char * packet) {
+void process_ipv4(const u_char * packet, u_char verbosity) {
 	// IP header parsing
 	const struct ip * header = (struct ip *) (packet + sizeof(struct ether_header));
 
-	// IP packet information extraction
-	char * source = NULL, * destination = NULL;
-	switch(header->ip_v) {
-		case 4:
-			source = malloc(INET_ADDRSTRLEN);
-			destination = malloc(INET_ADDRSTRLEN);
+	// IP addresses extraction
+	char * source = (char *) malloc((INET_ADDRSTRLEN + 1) * sizeof(char));
+  char * destination = (char *) malloc((INET_ADDRSTRLEN + 1) * sizeof(char));
 
-			if(inet_ntop(AF_INET, &header->ip_src, source, INET_ADDRSTRLEN) == NULL)
-				failwith("Failed to convert source IP address to string");
-			if(inet_ntop(AF_INET, &header->ip_dst, destination, INET_ADDRSTRLEN) == NULL)
-				failwith("Failed to convert destination IP address to string");
+	if(source == NULL)
+    failwith("Failed to reserve memory for IP source address");
 
-			printf("IP from %s to %s\n", source, destination);
+  if(destination == NULL)
+    failwith("Failed to reserve memory for IP destination address");
 
-			free(source);
-			free(destination);
-			break;
-		default:
-			break;
-	}
+	if(inet_ntop(AF_INET, &header->ip_src, source, INET_ADDRSTRLEN) == NULL)
+		failwith("Failed to convert source IP address to string");
+	if(inet_ntop(AF_INET, &header->ip_dst, destination, INET_ADDRSTRLEN) == NULL)
+		failwith("Failed to convert destination IP address to string");
+
+  // IP flags extraction
+  char flags[IPV4_PACKET_FLAGS_LENGTH] = "---\0";
+
+  if(header->ip_off & IP_RF) {
+    flags[0] = 'R';
+  }
+
+  if(header->ip_off & IP_DF) {
+    flags[1] = 'D';
+  }
+
+  if(header->ip_off & IP_MF) {
+    flags[2] = 'M';
+  }
+
+  // Print IP packet information
+  switch(verbosity) {
+    case VERBOSITY_LOW:
+      printf("IP %s > %s [%s] \n", source, destination, flags);
+      break;
+    case VERBOSITY_MEDIUM:
+      printf("IP %s > %s [%s] id %u\n", source, destination, flags, header->ip_id);
+      break;
+    case VERBOSITY_HIGH:
+      printf("  └─ \"IP version 4\" from %s to %s\n", source, destination);
+      printf("    ├─ Type of service: %u\n", header->ip_tos);
+      printf("    ├─ Total length: %u\n", header->ip_len);
+      printf("    ├─ Identification: %u\n", header->ip_id);
+      printf("    ├─ Flags: %s\n", flags);
+      printf("    ├─ Time to live: %u\n", header->ip_ttl);
+      printf("    └─ Checksum: %u\n", header->ip_sum);
+      break;
+    default:
+      failwith("Unknown verbosity level detected");
+  }
+
+  // Used memory free
+	free(source);
+	free(destination);
 }
