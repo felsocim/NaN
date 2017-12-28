@@ -34,7 +34,7 @@ int main(int argc, char ** argv)
 				if (trace != NULL)
 					failwith("The -i and -o options can not be used simultaneously!");
 
-				interface = (char *) malloc(strlen(optarg) * sizeof(char));
+				interface = (char *) malloc((strlen(optarg) + 1) * sizeof(char));
 				interface = strcpy(interface, optarg);
 				break;
 			case 'o':
