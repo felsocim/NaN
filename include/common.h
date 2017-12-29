@@ -11,6 +11,11 @@
 extern char * help_message;
 extern char * usage_message;
 
+typedef enum {
+  False,
+  True
+} Bool;
+
 void failwith(const char * message);
 void usage(const char * arg_0, const int exit_code);
 
