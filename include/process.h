@@ -9,10 +9,12 @@
 
 #include <net/ethernet.h>
 #include <netinet/ip.h>
+#include <netinet/ip6.h>
 #include <arpa/inet.h>
 
 #include "common.h"
 
 void process_ipv4(const u_char * packet, u_char verbosity);
+void process_ipv6(const u_char * packet, u_char verbosity);
 
 #endif // __PROCESS_H

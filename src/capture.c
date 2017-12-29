@@ -136,6 +136,9 @@ void got_packet(u_char * args, const struct pcap_pkthdr * header, const u_char *
 		case ETHERTYPE_IP: //IPv4
 			process_ipv4(packet, *args);
 			break;
+    case ETHERTYPE_IPV6: //IPv6
+			process_ipv6(packet, *args);
+			break;
 		default:
 			break;
 	}

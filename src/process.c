@@ -60,3 +60,46 @@ void process_ipv4(const u_char * packet, u_char verbosity) {
 	free(source);
 	free(destination);
 }
+
+void process_ipv6(const u_char * packet, u_char verbosity) {
+	// IP header parsing
+	const struct ip6_hdr * header = (struct ip6_hdr *) (packet + sizeof(struct ether_header));
+
+	// IP addresses extraction
+	char * source = (char *) malloc((INET6_ADDRSTRLEN + 1) * sizeof(char));
+  char * destination = (char *) malloc((INET6_ADDRSTRLEN + 1) * sizeof(char));
+
+	if(source == NULL)
+    failwith("Failed to reserve memory for IP source address");
+
+  if(destination == NULL)
+    failwith("Failed to reserve memory for IP destination address");
+
+	if(inet_ntop(AF_INET6, &header->ip6_src, source, INET6_ADDRSTRLEN) == NULL)
+		failwith("Failed to convert source IP address to string");
+	if(inet_ntop(AF_INET6, &header->ip6_dst, destination, INET6_ADDRSTRLEN) == NULL)
+		failwith("Failed to convert destination IP address to string");
+
+  // Print IP packet information
+  switch(verbosity) {
+    case VERBOSITY_LOW:
+      printf("IPv6 %s > %s \n", source, destination);
+      break;
+    case VERBOSITY_MEDIUM:
+      printf("IPv6 %s > %s \n", source, destination);
+      break;
+    case VERBOSITY_HIGH:
+      printf("  └─ \"IP version 6\" from %s to %s\n", source, destination);
+      printf("    ├─ Flow: %u\n", header->ip6_flow);
+      printf("    ├─ Payload length: %u\n", header->ip6_plen);
+      printf("    ├─ Next header: %u\n", header->ip6_nxt);
+      printf("    └─ Hop limit: %u\n", header->ip6_hlim);
+      break;
+    default:
+      failwith("Unknown verbosity level detected");
+  }
+
+  // Used memory free
+	free(source);
+	free(destination);
+}
