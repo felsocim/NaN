@@ -21,16 +21,17 @@ void process_ipv4(const u_char * packet, u_char verbosity) {
 
   // IP flags extraction
   char flags[IPV4_PACKET_FLAGS_LENGTH] = "---\0";
+  u_short offset = ntohs(header->ip_off);
 
-  if(header->ip_off & IP_RF) {
+  if(offset & IP_RF) {
     flags[0] = 'R';
   }
 
-  if(header->ip_off & IP_DF) {
+  if(offset & IP_DF) {
     flags[1] = 'D';
   }
 
-  if(header->ip_off & IP_MF) {
+  if(offset & IP_MF) {
     flags[2] = 'M';
   }
 
