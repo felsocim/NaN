@@ -139,7 +139,14 @@ void got_packet(u_char * args, const struct pcap_pkthdr * header, const u_char *
     case ETHERTYPE_IPV6: //IPv6
 			process_ipv6(packet, *args);
 			break;
+    case ETHERTYPE_ARP:
+      process_arp(packet, False, *args);
+      break;
+    case ETHERTYPE_REVARP:
+      process_arp(packet, True, *args);
+      break;
 		default:
+      printf("unknown packet type (0x%04x)\n", ntohs(ethernet->ether_type));
 			break;
 	}
 }
