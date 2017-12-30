@@ -35,19 +35,21 @@ void process_ipv4(const u_char * packet, u_char verbosity) {
     flags[2] = 'M';
   }
 
+  u_int16_t identification = ntohs(header->ip_id);
+
   // Print IP packet information
   switch(verbosity) {
     case VERBOSITY_LOW:
       printf("IP %s > %s [%s] \n", source, destination, flags);
       break;
     case VERBOSITY_MEDIUM:
-      printf("IP %s > %s [%s] id %u\n", source, destination, flags, header->ip_id);
+      printf("IP %s > %s [%s] id %u\n", source, destination, flags, identification);
       break;
     case VERBOSITY_HIGH:
       printf("  └─ \"IP version 4\" from %s to %s\n", source, destination);
       printf("    ├─ Type of service: %u\n", header->ip_tos);
       printf("    ├─ Total length: %u\n", header->ip_len);
-      printf("    ├─ Identification: %u\n", header->ip_id);
+      printf("    ├─ Identification: %u\n", identification);
       printf("    ├─ Flags: %s\n", flags);
       printf("    ├─ Time to live: %u\n", header->ip_ttl);
       printf("    └─ Checksum: %u\n", header->ip_sum);
