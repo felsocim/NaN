@@ -131,24 +131,33 @@ void got_packet(u_char * args, const struct pcap_pkthdr * header, const u_char *
 
   free(timestring);
 
+  u_int16_t type = ntohs(ethernet->ether_type);
+
   // Process overlying protocols' headers
-	switch(ntohs(ethernet->ether_type)) {
-		case ETHERTYPE_IP: //IPv4
+	switch(type) {
+		case ETHERTYPE_IP: // Internet Protocol of version 4
 			process_ipv4(packet, *args);
 			break;
-    case ETHERTYPE_IPV6: //IPv6
+    case ETHERTYPE_IPV6: // Internet Protocol of version 6
 			process_ipv6(packet, *args);
 			break;
-    case ETHERTYPE_ARP:
+    case ETHERTYPE_ARP: // Address Resolution Protocol
       process_arp(packet, False, *args);
       break;
-    case ETHERTYPE_REVARP:
+    case ETHERTYPE_REVARP: // Reverse Address Resolution Protocol
       process_arp(packet, True, *args);
       break;
-		default:
-      printf("unknown packet type (0x%04x)\n", ntohs(ethernet->ether_type));
+		default: // Unsupported packet types
+      printf("%sunsupported EtherType [value: 0x%X]", (*args == VERBOSITY_HIGH ? "  └─ " : ""), type);
+      if(type >= 0 && type <= 0x05DC)
+        printf(" (IEEE802.3 Ethernet II length)\n");
+      else
+        printf("\n");
 			break;
 	}
+
+  if(*args > VERBOSITY_LOW)
+    printf("\n");
 }
 
 int init_capture(pcap_t * capture, int nb_packets, u_char verbosity) {
