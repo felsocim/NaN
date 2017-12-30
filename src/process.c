@@ -56,6 +56,20 @@ void process_ipv4(const u_char * packet, u_char verbosity) {
       failwith("Unknown verbosity level detected");
   }
 
+  switch(header->ip_p) {
+    case PROTO_TCP:
+      // TODO: Call protocol tratment function
+      break;
+    case PROTO_UDP:
+      process_udp(packet, False, verbosity);
+      break;
+    case PROTO_SCTP:
+      // TODO: Call protocol tratment function
+      break;
+    default:
+      break;
+  }
+
   // Used memory free
 	free(source);
 	free(destination);
@@ -97,6 +111,20 @@ void process_ipv6(const u_char * packet, u_char verbosity) {
       break;
     default:
       failwith("Unknown verbosity level detected");
+  }
+
+  switch(header->ip6_nxt) {
+    case PROTO_TCP:
+      // TODO: Call protocol tratment function
+      break;
+    case PROTO_UDP:
+      process_udp(packet, False, verbosity);
+      break;
+    case PROTO_SCTP:
+      // TODO: Call protocol tratment function
+      break;
+    default:
+      break;
   }
 
   // Used memory free
@@ -195,5 +223,73 @@ void process_arp(const u_char * packet, Bool reverse, u_char verbosity) {
 
   if(unsupported) {
     printf("unsupported address resolution packet\n");
+  }
+}
+
+void process_udp(const u_char * packet, Bool ipv6, u_char verbosity) {
+	// UDP header parsing
+	const struct udphdr * header = (struct udphdr *) (packet + sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)));
+
+  u_int16_t source = ntohs(header->source),
+    destination = ntohs(header->dest),
+    length = ntohs(header->len),
+    checksum = ntohs(header->check);
+
+  switch(verbosity) {
+    case VERBOSITY_LOW:
+      printf("udp src %u, dst %u \n", source, destination);
+      break;
+    case VERBOSITY_MEDIUM:
+      printf("udp src %u, dst %u, len %u\n", source, destination, length);
+      break;
+    case VERBOSITY_HIGH:
+      printf("    └─ \"UDP datagram\" from port %u to port %u\n", source, destination);
+      printf("      ├─ Length (datagram's header including payload): %u bytes\n", length);
+      printf("      └─ Checksum: 0x%X\n", checksum);
+      break;
+    default:
+      failwith("Unknown verbosity level detected");
+  }
+
+  switch(destination) {
+    case PROTO_FTP:
+			// TODO: Call protocol tratment function
+			break;
+    case PROTO_SSH:
+			// TODO: Call protocol tratment function
+			break;
+    case PROTO_TELNET:
+			// TODO: Call protocol tratment function
+			break;
+    case PROTO_SMTP:
+			// TODO: Call protocol tratment function
+			break;
+    case PROTO_BOOTPS:
+			// TODO: Call protocol tratment function
+			break;
+    case PROTO_BOOTPC:
+			// TODO: Call protocol tratment function
+			break;
+    case PROTO_WWW:
+			// TODO: Call protocol tratment function
+			break;
+    case PROTO_IMAP:
+			// TODO: Call protocol tratment function
+			break;
+    case PROTO_IMAP3:
+			// TODO: Call protocol tratment function
+			break;
+    case PROTO_IMAPS:
+			// TODO: Call protocol tratment function
+			break;
+    case PROTO_POP2:
+			// TODO: Call protocol tratment function
+			break;
+    case PROTO_POP3:
+			// TODO: Call protocol tratment function
+			break;
+    case PROTO_POPS:
+			// TODO: Call protocol tratment function
+			break;
   }
 }

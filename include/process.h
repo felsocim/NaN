@@ -43,6 +43,7 @@
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
+#include <netinet/udp.h>
 #include <arpa/inet.h>
 
 #include "common.h"
@@ -50,5 +51,6 @@
 void process_ipv4(const u_char *, u_char);
 void process_ipv6(const u_char *, u_char);
 void process_arp(const u_char *, Bool, u_char);
+void process_udp(const u_char *, Bool, u_char);
 
 #endif // __PROCESS_H
