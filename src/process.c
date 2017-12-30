@@ -40,19 +40,21 @@ void process_ipv4(const u_char * packet, u_char verbosity) {
   // Print IP packet information
   switch(verbosity) {
     case VERBOSITY_LOW:
-      printf("IP %s > %s [%s] \n", source, destination, flags);
+      printf("IP %s > %s [%s] ", source, destination, flags);
       break;
     case VERBOSITY_MEDIUM:
       printf("IP %s > %s [%s] id %u\n", source, destination, flags, identification);
       break;
     case VERBOSITY_HIGH:
       printf("  └─ \"IP version 4\" from %s to %s\n", source, destination);
+      printf("    ├─ IHL: %u\n", ntohs(header->ip_hl));
       printf("    ├─ Type of service: %u\n", header->ip_tos);
-      printf("    ├─ Total length: %u\n", header->ip_len);
+      printf("    ├─ Total length: %u bytes\n", ntohs(header->ip_len));
       printf("    ├─ Identification: %u\n", identification);
       printf("    ├─ Flags: %s\n", flags);
+      printf("    ├─ Fragment offset: %u\n", ntohs(header->ip_tos & IP_OFFMASK));
       printf("    ├─ Time to live: %u\n", header->ip_ttl);
-      printf("    └─ Checksum: %u\n", header->ip_sum);
+      printf("    └─ Header checksum: 0x%X\n", ntohs(header->ip_sum));
       break;
     default:
       failwith("Unknown verbosity level detected");
@@ -99,16 +101,16 @@ void process_ipv6(const u_char * packet, u_char verbosity) {
   // Print IP packet information
   switch(verbosity) {
     case VERBOSITY_LOW:
-      printf("IPv6 %s > %s \n", source, destination);
+      printf("IPv6 %s > %s ", source, destination);
       break;
     case VERBOSITY_MEDIUM:
       printf("IPv6 %s > %s \n", source, destination);
       break;
     case VERBOSITY_HIGH:
       printf("  └─ \"IP version 6\" from %s to %s\n", source, destination);
-      printf("    ├─ Flow: %u\n", header->ip6_flow);
-      printf("    ├─ Payload length: %u\n", header->ip6_plen);
-      printf("    ├─ Next header: %u\n", header->ip6_nxt);
+      printf("    ├─ Traffic class: %u\n", (header->ip6_flow << 4) >> 20);
+      printf("    ├─ Flow: %u\n", ntohs(header->ip6_flow << 12));
+      printf("    ├─ Payload length: %u bytes\n", ntohs(header->ip6_plen));
       printf("    └─ Hop limit: %u\n", header->ip6_hlim);
       break;
     default:
@@ -196,9 +198,9 @@ void process_arp(const u_char * packet, Bool reverse, u_char verbosity) {
             printf("  └─ \"%sAddress Resolution Protocol packet\"\n", (reverse ? "Reverse " : ""));
             printf("    ├─ Hardware type: Ethernet 10/100Mbps (%u)\n", ntohs(header->arp_hrd));
             printf("    ├─ Protocol type: IPv4 (%04x)\n", ntohs(header->arp_pro));
-            printf("    ├─ Hardware address length: %u\n", header->arp_hln);
-            printf("    ├─ Protocol address length: %u\n", header->arp_pln);
-            printf("    ├─ Operation: %s (%u)\n", (ARP_GET_TYPE(operation) == ARP_REQUEST ? "request" : "reply"), header->arp_op);
+            printf("    ├─ Hardware address length: %u bytes\n", header->arp_hln);
+            printf("    ├─ Protocol address length: %u bytes\n", header->arp_pln);
+            printf("    ├─ Operation: %s (%u)\n", (ARP_GET_TYPE(operation) == ARP_REQUEST ? "request" : "reply"), operation);
             printf("    ├─ Sender hardware address: %s\n", hw_source);
             printf("    ├─ Sender protocol address: %s\n", ip_source);
             printf("    ├─ Target hardware address: %s\n", hw_destination);
