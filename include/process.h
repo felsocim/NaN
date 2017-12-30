@@ -8,6 +8,7 @@
 #define VERBOSITY_MEDIUM 0x32
 #define VERBOSITY_HIGH 0x33
 
+// TODO: To be simplified
 #define ARP_REQUEST 0
 #define ARP_REPLY 1
 #define ARP_UNKNOWN 2
