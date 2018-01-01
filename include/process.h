@@ -55,11 +55,13 @@
 #include <arpa/inet.h>
 
 #include "common.h"
+#include "bootp.h"
 
 void process_ipv4(const u_char *, u_char);
 void process_ipv6(const u_char *, u_char);
 void process_arp(const u_char *, Bool, u_char);
 void process_udp(const u_char *, Bool, u_char);
 void process_tcp(const u_char *, Bool, u_char);
+void process_bootp(const u_char *, long int, u_char);
 
 #endif // __PROCESS_H

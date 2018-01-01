@@ -269,10 +269,8 @@ void process_udp(const u_char * packet, Bool ipv6, u_char verbosity) {
 			// TODO: Call protocol tratment function
 			break;
     case PROTO_BOOTPS:
-			// TODO: Call protocol tratment function
-			break;
     case PROTO_BOOTPC:
-			// TODO: Call protocol tratment function
+			process_bootp(packet, sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + sizeof(struct udphdr), verbosity);
 			break;
     case PROTO_WWW:
 			// TODO: Call protocol tratment function
@@ -434,5 +432,104 @@ void process_tcp(const u_char * packet, Bool ipv6, u_char verbosity) {
     case PROTO_POPS:
 			// TODO: Call protocol tratment function
 			break;
+  }
+}
+
+void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
+  const struct bootp * data = (struct bootp *) packet + offset;
+  char * ciaddr = NULL,
+    * yiaddr = NULL,
+    * siaddr = NULL,
+    * giaddr = NULL,
+    * chaddr = NULL;
+
+  switch(verbosity) {
+    case VERBOSITY_LOW:
+      printf("bootp op %u server %s, file %s\n", data->bp_op, data->bp_sname, data->bp_file);
+      break;
+    case VERBOSITY_MEDIUM:
+      printf("bootp transaction 0x%X, op %u server %s, file %s, started %u sec(s) ago\n", ntohs(data->bp_xid), data->bp_op, data->bp_sname, data->bp_file, ntohs(data->bp_secs));
+      break;
+    case VERBOSITY_HIGH:
+      ciaddr = (char *) malloc((INET_ADDRSTRLEN + 1) * sizeof(char));
+
+      if(ciaddr == NULL)
+        failwith("Failed to reserve memory for client IP address");
+
+      yiaddr = (char *) malloc((INET_ADDRSTRLEN + 1) * sizeof(char));
+
+      if(yiaddr == NULL)
+        failwith("Failed to reserve memory for 'your' IP address");
+
+      siaddr = (char *) malloc((INET_ADDRSTRLEN + 1) * sizeof(char));
+
+      if(siaddr == NULL)
+        failwith("Failed to reserve memory for source IP address");
+
+      giaddr = (char *) malloc((INET_ADDRSTRLEN + 1) * sizeof(char));
+
+      if(giaddr == NULL)
+        failwith("Failed to reserve memory for gateway IP address");
+
+      chaddr = (char *) malloc((MAC_ADDRESS_LENGTH + 1) * sizeof(char));
+
+      if(chaddr == NULL)
+        failwith("Failed to reserve memory for client hardware address");
+
+      if(inet_ntop(AF_INET, &data->bp_ciaddr, ciaddr, INET_ADDRSTRLEN) == NULL)
+    		failwith("Failed to convert client IP address to string");
+
+      if(inet_ntop(AF_INET, &data->bp_yiaddr, yiaddr, INET_ADDRSTRLEN) == NULL)
+    		failwith("Failed to convert 'your' IP address to string");
+
+      if(inet_ntop(AF_INET, &data->bp_siaddr, siaddr, INET_ADDRSTRLEN) == NULL)
+    		failwith("Failed to convert source IP address to string");
+
+      if(inet_ntop(AF_INET, &data->bp_giaddr, giaddr, INET_ADDRSTRLEN) == NULL)
+    		failwith("Failed to convert gateway IP address to string");
+
+      if((chaddr = strcpy(chaddr, ether_ntoa((struct ether_addr *)data->bp_chaddr))) == NULL)
+        failwith("Failed to convert client's hardware address to string");
+
+      printf("        └─ \"BOOTP message\"\n");
+      printf("          ├─ Operation code: %u\n", data->bp_op);
+      printf("          ├─ Hardware address type: 0x%X\n", data->bp_htype);
+      printf("          ├─ Hardware address length: %u byte(s)\n", data->bp_hlen);
+      printf("          ├─ Gateway hops: %u\n", data->bp_hops);
+      printf("          ├─ Transaction identifier: 0x%X\n", ntohs(data->bp_xid));
+      printf("          ├─ Seconds since boot began: %u\n", ntohs(data->bp_secs));
+      printf("          ├─ Flags: 0x%X\n", ntohs(data->bp_flags));
+      printf("          ├─ Client's IP address: %s\n", ciaddr);
+      printf("          ├─ 'Your' IP address: %s\n", yiaddr);
+      printf("          ├─ Source IP address: %s\n", siaddr);
+      printf("          ├─ Gateway IP address: %s\n", giaddr);
+      printf("          ├─ Client's hardware address: %s\n", chaddr);
+      printf("          ├─ Server host name: %s\n", data->bp_sname);
+      printf("          ├─ Boot file name: %s\n", data->bp_file);
+      printf("          └─ Vendor specific: ");
+
+      u_int8_t magic[4] = VM_RFC1048;
+
+      if(data->bp_vend[0] == magic[0] && data->bp_vend[1] == magic[1] && data->bp_vend[2] == magic[2] && data->bp_vend[3] == magic[3]) {
+        int i = 4;
+
+        while(i < 64) {
+          u_int8_t type = data->bp_vend[i];
+          u_int8_t length = data->bp_vend[i + 1];
+
+          printf(" %u ", type);
+
+          i += length + 2;
+        }
+      }
+
+      printf("\n");
+
+      free(ciaddr);
+      free(yiaddr);
+      free(siaddr);
+      free(giaddr);
+      free(chaddr);
+      break;
   }
 }
