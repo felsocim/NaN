@@ -32,6 +32,13 @@
 #define PROTO_POP3 110
 #define PROTO_POPS 995
 
+#define TCPOPT_EOL 0
+#define TCPOPT_NOP 1
+#define TCPOPT_MSS 2
+#define TCPOPT_WS 3
+#define TCPOPT_SACK 4
+#define TCPOPT_TSTMP 8
+
 #if __BYTE_ORDER == __LITTLE_ENDIAN
   #define DESERIALIZE_UINT32(_UINT8_ARRAY) (0x0 | _UINT8_ARRAY[3] << 24 | _UINT8_ARRAY[2] << 16 | _UINT8_ARRAY[1] << 8 | _UINT8_ARRAY[0])
 #else
@@ -44,6 +51,7 @@
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/udp.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 
 #include "common.h"
@@ -52,5 +60,6 @@ void process_ipv4(const u_char *, u_char);
 void process_ipv6(const u_char *, u_char);
 void process_arp(const u_char *, Bool, u_char);
 void process_udp(const u_char *, Bool, u_char);
+void process_tcp(const u_char *, Bool, u_char);
 
 #endif // __PROCESS_H
