@@ -436,7 +436,7 @@ void process_tcp(const u_char * packet, Bool ipv6, u_char verbosity) {
 }
 
 void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
-  const struct bootp * data = (struct bootp *) packet + offset;
+  const struct bootp * data = (struct bootp *) (packet + offset);
   char * ciaddr = NULL,
     * yiaddr = NULL,
     * siaddr = NULL,
@@ -506,18 +506,90 @@ void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
       printf("          ├─ Client's hardware address: %s\n", chaddr);
       printf("          ├─ Server host name: %s\n", data->bp_sname);
       printf("          ├─ Boot file name: %s\n", data->bp_file);
-      printf("          └─ Vendor specific: ");
+      printf("          └─ Vendor specific:");
 
       u_int8_t magic[4] = VM_RFC1048;
 
       if(data->bp_vend[0] == magic[0] && data->bp_vend[1] == magic[1] && data->bp_vend[2] == magic[2] && data->bp_vend[3] == magic[3]) {
         int i = 4;
+        u_int8_t type = 0, length = 0;
 
-        while(i < 64) {
-          u_int8_t type = data->bp_vend[i];
-          u_int8_t length = data->bp_vend[i + 1];
+        while(type != TAG_END && i < 64) {
+          type = data->bp_vend[i];
+          length = data->bp_vend[i + 1];
 
-          printf(" %u ", type);
+          switch(type){
+            case TAG_DHCP_MESSAGE: // DHCP message
+              if(length == 1) {
+                switch(data->bp_vend[i + 2]) {
+                  case DHCPDISCOVER:
+                    printf(" DHCP/Discover");
+                    break;
+                  case DHCPOFFER:
+                    printf(" DHCP/Offer");
+                    break;
+                  case DHCPREQUEST:
+                    printf(" DHCP/Request");
+                    break;
+                  case DHCPDECLINE:
+                    printf(" DHCP/Decline");
+                    break;
+                  case DHCPACK:
+                    printf(" DHCP/ACK");
+                    break;
+                  case DHCPNAK:
+                    printf(" DHCP/NAK");
+                    break;
+                  case DHCPRELEASE:
+                    printf(" DHCP/Release");
+                    break;
+                  case DHCPINFORM:
+                    printf(" DHCP/Inform");
+                    break;
+                  case DHCPLEASEQUERY:
+                    printf(" DHCP/Lease Query");
+                    break;
+                  case DHCPLEASEUNASSIGNED:
+                    printf(" DHCP/Lease Unassigned");
+                    break;
+                  case DHCPLEASEUNKNOWN:
+                    printf(" DHCP/Lease Unknown");
+                    break;
+                  case DHCPLEASEACTIVE:
+                    printf(" DHCP/Lease Active");
+                    break;
+                  case DHCPBULKLEASEQUERY:
+                    printf(" DHCP/Bulk Lease Query");
+                    break;
+                  case DHCPLEASEQUERYDONE:
+                    printf(" DHCP/Lease Query Done");
+                    break;
+                  case DHCPACTIVELEASEQUERY:
+                    printf(" DHCP/Active Lease Query");
+                    break;
+                  case DHCPLEASEQUERYSTATUS:
+                    printf(" DHCP/Lease Query Status");
+                    break;
+                  case DHCPTLS:
+                    printf(" DHCP/TLS");
+                    break;
+                  default:
+                    printf(" DHCP/Unknown (%u)", data->bp_vend[i + 2]);
+                }
+              } else {
+                failwith("DHCP message length value mismatch. It should be '1'");
+              }
+              break;
+            default:
+              printf(" %u-%u-", type, length);
+
+              int j = 0;
+
+              for(j = i + 2; j < length; j++) {
+                printf("%c", (data->bp_vend[j] > 32 ? data->bp_vend[j] : '.'));
+              }
+              break;
+          }
 
           i += length + 2;
         }
@@ -531,5 +603,51 @@ void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
       free(giaddr);
       free(chaddr);
       break;
+  }
+}
+
+void process_bootp_vsopt(u_int8_t type, u_int8_t length, u_int8_t value[]) {
+  switch(type) {
+    case TAG_SUBNET_MASK:
+      printf(" subnet-mask");
+      if(verbosity == VERBOSITY_HIGH)
+        list_ip(length, value);
+      break;
+    case TAG_TIME_OFFSET:
+      printf(" tag-time-offset");
+      if(verbosity == VERBOSITY_HIGH) {
+        printf(" %d", (int32_t) DESERIALIZE_UINT32(value));
+      }
+      break;
+    case TAG_GATEWAY:
+      printf(" router");
+      if(verbosity == VERBOSITY_HIGH)
+        list_ip(length, value);
+      break;
+    case TAG_TIME_SERVER:
+    case TAG_NAME_SERVER:
+    case TAG_DOMAIN_SERVER:
+    case TAG_LOG_SERVER:
+    case TAG_COOKIE_SERVER:
+    case TAG_LPR_SERVER:
+    case TAG_IMPRESS_SERVER:
+    case TAG_RLP_SERVER:
+    case TAG_HOSTNAME:
+    case TAG_BOOTSIZE:
+    case TAG_REQUESTED_IP:
+    case TAG_IP_LEASE:
+    case TAG_OPT_OVERLOAD:
+    case TAG_TFTP_SERVER:
+    case TAG_BOOTFILENAME:
+    case TAG_DHCP_MESSAGE:
+    case TAG_SERVER_ID:
+    case TAG_PARM_REQUEST:
+    case TAG_MESSAGE:
+    case TAG_MAX_MSG_SIZE:
+    case TAG_RENEWAL_TIME:
+    case TAG_REBIND_TIME:
+    case TAG_VENDOR_CLASS:
+    case TAG_CLIENT_ID:
+    default:
   }
 }
