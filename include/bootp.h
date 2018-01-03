@@ -59,7 +59,6 @@ struct bootp {
 
 #define TAG_PAD			((u_int8_t)   0)
 #define TAG_SUBNET_MASK		((u_int8_t)   1)
-#define TAG_TIME_OFFSET		((u_int8_t)   2)
 #define TAG_GATEWAY		((u_int8_t)   3)
 #define TAG_TIME_SERVER		((u_int8_t)   4)
 #define TAG_NAME_SERVER		((u_int8_t)   5)
