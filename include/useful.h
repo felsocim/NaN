@@ -8,6 +8,6 @@
 #endif
 
 char * iptos(struct in_addr *);
-void list_ip(u_int8_t, u_int8_t[]);
+void list_ip(u_int8_t, u_int8_t[], u_int);
 
 #endif // __USEFUL_H

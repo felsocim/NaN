@@ -130,6 +130,7 @@ void got_packet(u_char * args, const struct pcap_pkthdr * header, const u_char *
   }
 
   free(timestring);
+  free(datetime);
 
   u_int16_t type = ntohs(ethernet->ether_type);
 

@@ -9,7 +9,7 @@ void finish(int signum) {
 	if(capture != NULL) {
 		printf("\nCapture halt.\n");
 		pcap_breakloop(capture);
-
+    pcap_close(capture);
 		return;
 	}
 
@@ -22,8 +22,12 @@ int main(int argc, char ** argv)
 	u_char verbosity = 0;
   int c = 0;
 	struct sigaction close;
+  sigset_t set;
 
+  sigemptyset(&set);
 	close.sa_handler = finish;
+  close.sa_flags = SA_NODEFER;
+  close.sa_mask = set;
 
 	if(sigaction(SIGINT, &close, NULL) != 0)
 		failwith("Failed to set close signal");
@@ -102,6 +106,7 @@ int main(int argc, char ** argv)
 	  }
   }
 
+  pcap_close(capture);
 	if(interface != NULL)
 		free(interface);
 	if(trace != NULL)
