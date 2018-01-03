@@ -87,3 +87,23 @@ struct bootp {
 #define	TAG_REBIND_TIME		((u_int8_t)  59)
 #define	TAG_VENDOR_CLASS	((u_int8_t)  60)
 #define	TAG_CLIENT_ID		((u_int8_t)  61)
+
+/* DHCP Message types (values for TAG_DHCP_MESSAGE option) */
+#define DHCPDISCOVER	1
+#define DHCPOFFER	2
+#define DHCPREQUEST	3
+#define DHCPDECLINE	4
+#define DHCPACK		5
+#define DHCPNAK		6
+#define DHCPRELEASE	7
+#define DHCPINFORM	8
+#define DHCPFORCERENEW 9
+#define DHCPLEASEQUERY 10
+#define DHCPLEASEUNASSIGNED 11
+#define DHCPLEASEUNKNOWN 12
+#define DHCPLEASEACTIVE 13
+#define DHCPBULKLEASEQUERY 14
+#define DHCPLEASEQUERYDONE 15
+#define DHCPACTIVELEASEQUERY 16
+#define DHCPLEASEQUERYSTATUS 17
+#define DHCPTLS 18
