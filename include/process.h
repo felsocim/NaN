@@ -1,7 +1,7 @@
 #ifndef __PROCESS_H
 #define __PROCESS_H
 
-#define MAC_ADDRESS_LENGTH 16
+#define MAC_ADDRESS_LENGTH 17
 #define IPV4_PACKET_FLAGS_LENGTH 4
 
 #define VERBOSITY_LOW 0x31
