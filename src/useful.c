@@ -9,6 +9,16 @@ char * iptos(struct in_addr * address) {
   return addr;
 }
 
+char * mactos(struct ether_addr * address) {
+  char * addr = (char *) malloc((MAC_ADDRESS_LENGTH + 1) * sizeof(char));
+  if(addr == NULL)
+    failwith("Failed to reserve memory for a MAC address string");
+  addr = strcpy(addr, ether_ntoa(address));
+  if(addr == NULL)
+    failwith("Failed to convert a MAC address to string");
+  return addr;
+}
+
 void list_ip(u_int8_t size, u_int8_t values[], u_int start_at) {
   int i = 0;
   struct in_addr addr;
