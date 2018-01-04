@@ -402,22 +402,25 @@ void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbos
 
   switch (source) {
     case PROTO_SMTP:
-      process_smtp_ftp(packet, "Simple Mail Transfer Protocol", "smtp", next, dlen, TP_REPLY | TP_SERVER, verbosity);
+      process_smtp_ftp_pop(packet, "Simple Mail Transfer Protocol", "smtp", next, dlen, TP_REPLY | TP_SERVER, verbosity);
       break;
     case PROTO_FTPC:
-      process_smtp_ftp(packet, "File Transfer Protocol", "ftp", next, dlen, TP_REPLY | TP_SERVER, verbosity);
+      process_smtp_ftp_pop(packet, "File Transfer Protocol", "ftp", next, dlen, TP_REPLY | TP_SERVER, verbosity);
       break;
     case PROTO_FTPD:
-      process_smtp_ftp(packet, "File Transfer Protocol", "ftp", next, dlen, TP_DATA | TP_SERVER, verbosity);
+      process_smtp_ftp_pop(packet, "File Transfer Protocol", "ftp", next, dlen, TP_DATA | TP_SERVER, verbosity);
+      break;
+    case PROTO_POP3:
+      process_smtp_ftp_pop(packet, "Post Office Protocol", "pop", next, dlen, TP_REPLY | TP_SERVER, verbosity);
       break;
   }
 
   switch(destination) {
     case PROTO_FTPC:
-      process_smtp_ftp(packet, "File Transfer Protocol", "ftp", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
+      process_smtp_ftp_pop(packet, "File Transfer Protocol", "ftp", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
       break;
     case PROTO_FTPD:
-      process_smtp_ftp(packet, "File Transfer Protocol", "ftp", next, dlen, TP_DATA | TP_CLIENT, verbosity);
+      process_smtp_ftp_pop(packet, "File Transfer Protocol", "ftp", next, dlen, TP_DATA | TP_CLIENT, verbosity);
       break;
     case PROTO_SSH:
 			// TODO: Call protocol tratment function
@@ -426,7 +429,7 @@ void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbos
 			// TODO: Call protocol tratment function
 			break;
     case PROTO_SMTP:
-      process_smtp_ftp(packet, "Simple Mail Transfer Protocol", "smtp", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
+      process_smtp_ftp_pop(packet, "Simple Mail Transfer Protocol", "smtp", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
 			break;
     case PROTO_BOOTPS:
 			// TODO: Call protocol tratment function
@@ -446,14 +449,8 @@ void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbos
     case PROTO_IMAPS:
 			// TODO: Call protocol tratment function
 			break;
-    case PROTO_POP2:
-			// TODO: Call protocol tratment function
-			break;
     case PROTO_POP3:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_POPS:
-			// TODO: Call protocol tratment function
+			process_smtp_ftp_pop(packet, "Post Office Protocol", "pop", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
 			break;
   }
 }
@@ -830,7 +827,7 @@ void process_bootp_vsopt(u_int8_t value[], u_int offset, Bool last, u_char verbo
   printf("\n");
 }
 
-void process_smtp_ftp(const u_char * packet, char * lo_protocol, char * sh_protocol, long int offset, u_short size, u_char flags, u_char verbosity) {
+void process_smtp_ftp_pop(const u_char * packet, char * lo_protocol, char * sh_protocol, long int offset, u_short size, u_char flags, u_char verbosity) {
   u_char * data = (u_char *) (packet + offset);
   char * source = (flags & TP_CLIENT) ? "client" : "server",
     * destination = (flags & TP_CLIENT) ? "server" : "client";
