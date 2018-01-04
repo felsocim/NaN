@@ -256,7 +256,7 @@ void process_udp(const u_char * packet, Bool ipv6, u_char verbosity) {
   }
 
   switch(destination) {
-    case PROTO_FTP:
+    case PROTO_FTPC:
 			// TODO: Call protocol tratment function
 			break;
     case PROTO_SSH:
@@ -392,17 +392,33 @@ void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbos
     printf("\n");
   }
 
+  unsigned short int dlen = length - (offset * 4);
+
+  if(dlen < 1) // if the data part is empty parsing is finished
+    return;
+
+  long int next = sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + (offset * 4);
+  //unsigned short int proto = 0x0;
+
   switch (source) {
     case PROTO_SMTP:
-      if(length - (offset * 4) > 0)
-        process_smtp(packet, sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + (offset * 4), length - (offset * 4), 'S', verbosity);
+      process_smtp(packet, next, dlen, 'S', verbosity);
+      break;
+    case PROTO_FTPC:
+      process_ftp(packet, next, dlen, FTP_REPLY | FTP_SERVER, verbosity);
+      break;
+    case PROTO_FTPD:
+      process_ftp(packet, next, dlen, FTP_DATA | FTP_SERVER, verbosity);
       break;
   }
 
   switch(destination) {
-    case PROTO_FTP:
-			// TODO: Call protocol tratment function
-			break;
+    case PROTO_FTPC:
+      process_ftp(packet, next, dlen, FTP_COMMAND | FTP_CLIENT, verbosity);
+      break;
+    case PROTO_FTPD:
+      process_ftp(packet, next, dlen, FTP_DATA | FTP_CLIENT, verbosity);
+      break;
     case PROTO_SSH:
 			// TODO: Call protocol tratment function
 			break;
@@ -410,9 +426,7 @@ void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbos
 			// TODO: Call protocol tratment function
 			break;
     case PROTO_SMTP:
-      //printf("%u - %u = %u\n", length, (offset * 4), length - (offset * 4));
-      if(length - (offset * 4) > 0)
-			   process_smtp(packet, sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + (offset * 4), length - (offset * 4), 'C', verbosity);
+      process_smtp(packet, next, dlen, 'C', verbosity);
 			break;
     case PROTO_BOOTPS:
 			// TODO: Call protocol tratment function
@@ -834,6 +848,54 @@ void process_smtp(const u_char * packet, long int offset, u_short size, u_char s
           printf("\n              - ");
         else if(data[i] != 0x0D)
           printf("%c", data[i]);
+      }
+      break;
+    default:
+      failwith("Unknown verbosity level detected");
+  }
+
+  printf("\n");
+}
+
+void process_ftp(const u_char * packet, long int offset, u_short size, u_char flags, u_char verbosity) {
+  u_char * data = (u_char *) (packet + offset);
+  char * source = (flags & FTP_CLIENT) ? "client" : "server",
+    * destination = (flags & FTP_CLIENT) ? "server" : "client";
+  bool is_command = flags & FTP_COMMAND, is_reply = flags & FTP_REPLY;
+
+  u_short i = 0;
+
+  switch (verbosity) {
+    case VERBOSITY_LOW:
+    case VERBOSITY_MEDIUM:
+      printf("ftp %s > %s", source, destination);
+      break;
+    case VERBOSITY_HIGH:
+      printf("          └─ \"FTP message from %s to %s\"\n", source, destination);
+      if(is_command || is_reply) { // client's command line
+        printf("            └─ %s: ", (is_command ? "Command" : "Response"));
+        bool got_first = false;
+        for(i = 0; i < size; i++) {
+          if(data[i] == 0x20 && !got_first) {
+            printf("\n              └─ Argument(s): ");
+            got_first = true;
+          } else {
+            printc(data[i]);
+          }
+        }
+      } else {
+        printf("            └─ Content: \n");
+        printf("                 ");
+        int printed = 0;
+        for(i = 0; i < size; i++) {
+          if((data[i] == 0x0A && (i + 1) < size) || printed > 63) {
+            printf("\n                 ");
+            printed = 0;
+          } else if(data[i] != 0x0D) {
+            printc(data[i]);
+            printed++;
+          }
+        }
       }
       break;
     default:
