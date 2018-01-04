@@ -31,3 +31,13 @@ void list_ip(u_int8_t size, u_int8_t values[], u_int start_at) {
     addr_string = NULL;
   }
 }
+
+void printc(u_char __c) {
+  if(__c == 0xA || __c == 0xD)
+    return;
+
+  if(__c > 31 && __c < 127)
+    printf("%c", __c);
+  else
+    printf(".");
+}
