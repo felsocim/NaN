@@ -62,7 +62,7 @@ void process_ipv4(const u_char * packet, u_char verbosity) {
 
   switch(header->ip_p) {
     case PROTO_TCP:
-      process_tcp(packet, False, verbosity);
+      process_tcp(packet, False, ntohs(header->ip_len) - sizeof(struct ip), verbosity);
       break;
     case PROTO_UDP:
       process_udp(packet, False, verbosity);
@@ -119,7 +119,7 @@ void process_ipv6(const u_char * packet, u_char verbosity) {
 
   switch(header->ip6_nxt) {
     case PROTO_TCP:
-      process_tcp(packet, True, verbosity);
+      process_tcp(packet, True, ntohs(header->ip6_plen) - sizeof(struct ip6_hdr), verbosity);
       break;
     case PROTO_UDP:
       process_udp(packet, True, verbosity);
@@ -296,7 +296,7 @@ void process_udp(const u_char * packet, Bool ipv6, u_char verbosity) {
   }
 }
 
-void process_tcp(const u_char * packet, Bool ipv6, u_char verbosity) {
+void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbosity) {
 	// TCP header parsing
 	const struct tcphdr * header = (struct tcphdr *) (packet + sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)));
 
@@ -355,7 +355,7 @@ void process_tcp(const u_char * packet, Bool ipv6, u_char verbosity) {
     u_int8_t * options = ((u_int8_t *) header) + 20;
     u_int8_t * eol = options + ((offset - 5) * 4);
 
-    while((eol - options) > 0) {
+    while((eol - options) >= 0) {
       switch(*options) {
         case TCPOPT_NOP:
           printf("no-operation ");
@@ -392,6 +392,13 @@ void process_tcp(const u_char * packet, Bool ipv6, u_char verbosity) {
     printf("\n");
   }
 
+  switch (source) {
+    case PROTO_SMTP:
+      if(length - (offset * 4) > 0)
+        process_smtp(packet, sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + (offset * 4), length - (offset * 4), 'S', verbosity);
+      break;
+  }
+
   switch(destination) {
     case PROTO_FTP:
 			// TODO: Call protocol tratment function
@@ -403,7 +410,9 @@ void process_tcp(const u_char * packet, Bool ipv6, u_char verbosity) {
 			// TODO: Call protocol tratment function
 			break;
     case PROTO_SMTP:
-			// TODO: Call protocol tratment function
+      //printf("%u - %u = %u\n", length, (offset * 4), length - (offset * 4));
+      if(length - (offset * 4) > 0)
+			   process_smtp(packet, sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + (offset * 4), length - (offset * 4), 'C', verbosity);
 			break;
     case PROTO_BOOTPS:
 			// TODO: Call protocol tratment function
@@ -802,6 +811,33 @@ void process_bootp_vsopt(u_int8_t value[], u_int offset, Bool last, u_char verbo
       printf(" %s", name);
       free(name);
     }
+  }
+
+  printf("\n");
+}
+
+void process_smtp(const u_char * packet, long int offset, u_short size, u_char source, u_char verbosity) {
+  u_char * data = (u_char *) (packet + offset);
+  u_short i = 0;
+
+  switch (verbosity) {
+    case VERBOSITY_LOW:
+    case VERBOSITY_MEDIUM:
+      printf("smtp %c > %c", source, (source == 'C' ? 'S' : 'C'));
+      break;
+    case VERBOSITY_HIGH:
+      printf("          └─ \"SMTP message from %s to %s\"\n", (source == 'C' ? "client" : "server"), (source == 'C' ? "server" : "client"));
+      printf("            └─ Content: ");
+      printf("\n              - ");
+      for(i = 0; i < size; i++) {
+        if(data[i] == 0x0A && (i + 1) < size)
+          printf("\n              - ");
+        else if(data[i] != 0x0D)
+          printf("%c", data[i]);
+      }
+      break;
+    default:
+      failwith("Unknown verbosity level detected");
   }
 
   printf("\n");

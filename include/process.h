@@ -62,8 +62,9 @@ void process_ipv4(const u_char *, u_char);
 void process_ipv6(const u_char *, u_char);
 void process_arp(const u_char *, Bool, u_char);
 void process_udp(const u_char *, Bool, u_char);
-void process_tcp(const u_char *, Bool, u_char);
+void process_tcp(const u_char *, Bool, u_short, u_char);
 void process_bootp(const u_char *, long int, u_char);
 void process_bootp_vsopt(u_int8_t[], u_int, Bool, u_char);
+void process_smtp(const u_char *, long int, u_short, u_char, u_char);
 
 #endif // __PROCESS_H
