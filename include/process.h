@@ -40,11 +40,11 @@
 #define TCPOPT_SACK 4
 #define TCPOPT_TSTMP 8
 
-#define FTP_COMMAND 0x1
-#define FTP_REPLY 0x2
-#define FTP_DATA 0x4
-#define FTP_CLIENT 0x8
-#define FTP_SERVER 0x10
+#define TP_COMMAND 0x1
+#define TP_REPLY 0x2
+#define TP_DATA 0x4
+#define TP_CLIENT 0x8
+#define TP_SERVER 0x10
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
   #define DESERIALIZE_UINT32(_UINT8_ARRAY) (0x0 | _UINT8_ARRAY[3] << 24 | _UINT8_ARRAY[2] << 16 | _UINT8_ARRAY[1] << 8 | _UINT8_ARRAY[0])
@@ -72,7 +72,6 @@ void process_udp(const u_char *, Bool, u_char);
 void process_tcp(const u_char *, Bool, u_short, u_char);
 void process_bootp(const u_char *, long int, u_char);
 void process_bootp_vsopt(u_int8_t[], u_int, Bool, u_char);
-void process_smtp(const u_char *, long int, u_short, u_char, u_char);
-void process_ftp(const u_char *, long int, u_short, u_char, u_char);
+void process_smtp_ftp(const u_char *, char *, char *, long int, u_short, u_char, u_char);
 
 #endif // __PROCESS_H
