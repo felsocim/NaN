@@ -255,6 +255,15 @@ void process_udp(const u_char * packet, Bool ipv6, u_char verbosity) {
       failwith("Unknown verbosity level detected");
   }
 
+  u_short dlen = length - 8;
+  long int next = sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + sizeof(struct udphdr);
+
+  switch (source) {
+    case PROTO_BOOTPS:
+      process_bootp(packet, next, verbosity);
+      break;
+  }
+
   switch(destination) {
     case PROTO_FTPC:
 			// TODO: Call protocol tratment function
