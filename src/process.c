@@ -1109,7 +1109,6 @@ void process_telnet(const u_char * packet, long int offset, u_short length, u_ch
     * destination = (flags & TP_CLIENT) ? "server" : "client";
 
   bool optneg = (data[0] == TELNETCTC_IAC),
-    last = false,
     suboption = false,
     list = false,
     label = false;
@@ -1129,122 +1128,139 @@ void process_telnet(const u_char * packet, long int offset, u_short length, u_ch
       if(optneg) {
         printf("            └─ Options:\n");
         while (i < length) {
-          last = (i + 1 == length);
-
           if(data[i] == TELNETCTC_IAC) {
             by = 1;
             printf("\n");
+            last_opt = data[i];
           } else if(last_opt == TELNETCTC_IAC) {
             switch(data[i]) {
               case TELNETCTC_NOP:
-  							printf("              ├─ No Operation\n");
+  							printf("                ─ No Operation\n");
   							break;
               case TELNETCTC_DM:
-  							printf("              ├─ Data Mark\n");
+  							printf("                ─ Data Mark\n");
   							break;
               case TELNETCTC_IP:
-  							printf("              ├─ Interrupt Process\n");
+  							printf("                ─ Interrupt Process\n");
   							break;
               case TELNETCTC_AO:
-  							printf("              ├─ Abort Output\n");
+  							printf("                ─ Abort Output\n");
   							break;
               case TELNETCTC_AYT:
-  							printf("              ├─ Are You There?\n");
+  							printf("                ─ Are You There?\n");
   							break;
               case TELNETCTC_EC:
-  							printf("              ├─ Erase Character\n");
+  							printf("                ─ Erase Character\n");
   							break;
               case TELNETCTC_EL:
-  							printf("              ├─ Erase Line\n");
+  							printf("                ─ Erase Line\n");
   							break;
               case TELNETCTC_GA:
-  							printf("              ├─ Go Ahead\n");
+  							printf("                ─ Go Ahead\n");
   							break;
               case TELNETCTC_SB:
+                printf("                ─ Subnegotiation begin\n");
                 suboption = true;
                 break;
               case TELNETCTC_SE:
+                printf("                ─ Subnegotiation end\n");
                 suboption = false;
                 label = false;
-                printf("\n");
   							break;
               case TELNETCTC_WILL:
-  							printf("              ├─ WILL");
+  							printf("                ─ WILL");
   							break;
               case TELNETCTC_WONT:
-  							printf("              ├─ WON'T");
+  							printf("                ─ WON'T");
   							break;
               case TELNETCTC_DO:
-  							printf("              ├─ DO");
+  							printf("                ─ DO");
   							break;
               case TELNETCTC_DONT:
-  							printf("              ├─ DON'T");
+  							printf("                ─ DON'T");
   							break;
               default:
-                printf("              ├─ unknown (%u)\n", data[i]);
+                printf("                ─ unknown (%u)\n", data[i]);
                 break;
             }
             if(data[i] >= TELNETCTC_WILL && data[i] <= TELNETCTC_DONT)
               list = true;
             by = 1;
+            last_opt = data[i];
           } else if((suboption || list) && !label) {
             switch(data[i]) {
               case TELNETOPT_ECHO:
-  							printf("%secho", (suboption ? "                  - " : " "));
+  							printf("%secho%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
   							break;
               case TELNETOPT_SUPPRESS_GO_AHEAD:
-  							printf("%ssuppress-go-ahead", (suboption ? "                  - " : " "));
+  							printf("%ssuppress-go-ahead%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
   							break;
+              case TELNETOPT_STATUS:
+                printf("%sstatus%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
+                break;
+              case TELNETOPT_TIMING_MARK:
+                printf("%stiming-mark%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
+                break;
               case TELNETOPT_TERMINAL_TYPE:
-  							printf("%sterminal-type", (suboption ? "                  - " : " "));
+  							printf("%sterminal-type%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
   							break;
               case TELNETOPT_WINDOW_SIZE:
-  							printf("%swindow-size", (suboption ? "                  - " : " "));
+  							printf("%swindow-size%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
   							break;
               case TELNETOPT_TERMINAL_SPEED:
-  							printf("%sterminal-speed", (suboption ? "                  - " : " "));
+  							printf("%sterminal-speed%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
   							break;
+              case TELNETOPT_REMOTE_FLOW_CONTROL:
+                printf("%sremote-flow-control%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
+                break;
               case TELNETOPT_LINE_MODE:
-  							printf("%sline-mode", (suboption ? "                  - " : " "));
+  							printf("%sline-mode%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
   							break;
+              case TELNETOPT_X_DISPLAY_LOCATION:
+                printf("%sx-display-location%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
+                break;
               case TELNETOPT_ENVIRONMENT_VARIABLES:
-  							printf("%senvironment-variables", (suboption ? "                  - " : " "));
+  							printf("%senvironment-variables%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
   							break;
+              case TELNETOPT_AUTHENTICATION_OPTION:
+                printf("%sauthentication-option%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
+                break;
+              case TELNETOPT_ENCRYPTION_OPTION:
+                printf("%sencryption-option%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
+                break;
               case TELNETOPT_NEW_ENVIRONMENT_VARIABLES:
-  							printf("%snew-environment-variables", (suboption ? "                  - " : " "));
+  							printf("%snew-environment-variables%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
   							break;
               default:
-                printf("%s", (suboption ? "                  - " : " "));
-                if(is_printable(data[i]))
-                  printf("%c", data[i]);
-                else
-                  printf("0x%X", data[i]);
+                printf("%s%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
+                printf("0x%02X", data[i]);
                 break;
             }
             list = false;
             if(suboption)
               label = true;
             by = 1;
+            last_opt = data[i];
           } else if(suboption && label) {
-            if(last_opt == TELNETOPT_TERMINAL_TYPE) {
+            if(last_opt == TELNETOPT_TERMINAL_TYPE || last_opt == TELNETOPT_X_DISPLAY_LOCATION) {
               if(data[i] == 1)
-                printf(" required-value ");
+                printf("VALUE REQUEST ");
+              else if(data[i] == 0)
+                printf("HERE'S MY VALUE ");
+              else
+                printc(data[i]);
               by = 1;
             } else if(last_opt == TELNETOPT_WINDOW_SIZE) {
-              printf(" width %u, ", ntohs(DESERIALIZE_UINT8TO16(data, i)));
+              printf("width %u, ", ntohs(DESERIALIZE_UINT8TO16(data, i)));
               int temp = i + 2;
               printf("height %u ", ntohs(DESERIALIZE_UINT8TO16(data, temp)));
               by = 4;
             } else {
-              if(is_printable(data[i]))
-                printf("%c", data[i]);
-              else
-                printf("0x%X", data[i]);
+              printf("%02x", data[i]);
               by = 1;
             }
           }
 
-          last_opt = data[i];
           i += by;
         }
       } else {
