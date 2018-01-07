@@ -1056,12 +1056,12 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
         printdl((u_char *) data, (int) (headers - data + i), length, 17);
       }
       break;
+    default:
+      failwith("Unknown verbosity level detected");
   }
 
   printf("\n");
 }
-
-// TODO: Add missing default cases to verbosity level switches
 
 void process_telnet(const u_char * packet, long int offset, u_short length, u_char flags, u_char verbosity) {
   u_char * data = (u_char *) (packet + offset);
