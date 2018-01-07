@@ -23,6 +23,7 @@
 #define PROTO_SSH 22
 #define PROTO_TELNET 23
 #define PROTO_SMTP 25
+#define PROTO_DNS 53
 #define PROTO_BOOTPS 67
 #define PROTO_BOOTPC 68
 #define PROTO_WWW 80 // DNS & HTTP
@@ -98,6 +99,7 @@
 #include "common.h"
 #include "useful.h"
 #include "bootp.h"
+#include "dns.h"
 
 void process_ipv4(const u_char *, u_char);
 void process_ipv6(const u_char *, u_char);
@@ -109,5 +111,6 @@ void process_bootp_vsopt(u_int8_t[], u_int, Bool, u_char);
 void process_smtp_ftp_pop_imap(const u_char *, char *, char *, long int, u_short, u_char, u_char);
 void process_http(const u_char *, long int, u_short, u_char, u_char);
 void process_telnet(const u_char *, long int, u_short, u_char, u_char);
+void process_dns(const u_char *, long int, u_short, u_char, u_char);
 
 #endif // __PROCESS_H

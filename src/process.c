@@ -259,12 +259,18 @@ void process_udp(const u_char * packet, Bool ipv6, u_char verbosity) {
   long int next = sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + sizeof(struct udphdr);
 
   switch (source) {
+    case PROTO_DNS:
+      process_dns(packet, next, dlen, TP_SERVER, verbosity);
+      break;
     case PROTO_BOOTPS:
       process_bootp(packet, next, verbosity);
       break;
   }
 
   switch(destination) {
+    case PROTO_DNS:
+      process_dns(packet, next, dlen, TP_CLIENT, verbosity);
+      break;
     case PROTO_FTPC:
 			// TODO: Call protocol tratment function
 			break;
@@ -1239,6 +1245,74 @@ void process_telnet(const u_char * packet, long int offset, u_short length, u_ch
       break;
     default:
       failwith("Unknown verbosity level detected");
+  }
+
+  printf("\n");
+}
+
+void process_dns(const u_char * packet, long int offset, u_short length, u_char flags, u_char verbosity) {
+  struct dns * header = (struct dns *) (packet + offset);
+  char * source = (flags & TP_CLIENT) ? "client" : "server",
+    * destination = (flags & TP_CLIENT) ? "server" : "client";
+  u_short id = ntohs(header->id),
+    q_count = ntohs(header->q_count),
+    ans_count = ntohs(header->ans_count),
+    auth_count = ntohs(header->auth_count),
+    res_count = ntohs(header->res_count);
+  char dns_flags[9] = "--------\0";
+
+  if(header->aa) {
+    dns_flags[0] = 'A';
+    dns_flags[1] = 'A';
+  }
+
+  if(header->tc) {
+    dns_flags[2] = 'T';
+    dns_flags[3] = 'C';
+  }
+
+  if(header->rd) {
+    dns_flags[4] = 'R';
+    dns_flags[5] = 'D';
+  }
+
+  if(header->ra) {
+    dns_flags[6] = 'R';
+    dns_flags[7] = 'A';
+  }
+
+  switch (verbosity) {
+    case VERBOSITY_LOW:
+      printf("dns %s %s > %s id %u\n", (header->qr ? "response" : "query"), source, destination, id);
+      break;
+    case VERBOSITY_MEDIUM:
+      printf("dns %s %s > %s [%s] id %u\n", (header->qr ? "response" : "query"), source, destination, dns_flags, id);
+      break;
+    case VERBOSITY_HIGH:
+      printf("          └─ \"Domain Name System %s from %s to %s\"\n", (header->qr ? "response" : "query"), source, destination);
+      printf("            ├─ Identifier: 0x%X\n", id);
+      printf("            ├─ Operation code: ");
+      switch(header->opcode) {
+        case DNS_OPCODE_QUERY:
+          printf("QUERY\n");
+          break;
+        case DNS_OPCODE_IQUERY:
+          printf("IQUERY\n");
+          break;
+        case DNS_OPCODE_STATUS:
+          printf("STATUS\n");
+          break;
+        default:
+          printf("N/A\n");
+          break;
+      }
+      printf("            ├─ Flags: %s\n", dns_flags);
+      printf("            ├─ Number of question entries: %u\n", q_count);
+      printf("            ├─ Number of answer entries: %u\n", ans_count);
+      printf("            ├─ Number of authority entries: %u\n", auth_count);
+      printf("            ├─ Number of resource entries: %u\n", res_count);
+      printf("            └─ Options:\n");
+      break;
   }
 
   printf("\n");
