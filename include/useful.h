@@ -19,6 +19,7 @@
 char * iptos(struct in_addr *);
 char * mactos(struct ether_addr *);
 void list_ip(u_int8_t, u_int8_t[], u_int);
+bool is_printable(u_char);
 void printc(u_char);
 
 #endif // __USEFUL_H

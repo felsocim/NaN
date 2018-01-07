@@ -32,11 +32,15 @@ void list_ip(u_int8_t size, u_int8_t values[], u_int start_at) {
   }
 }
 
+bool is_printable(u_char __c) {
+  return (__c > 31 && __c < 127);
+}
+
 void printc(u_char __c) {
   if(__c == 0xA || __c == 0xD)
     return;
 
-  if(__c > 31 && __c < 127)
+  if(is_printable(__c))
     printf("%c", __c);
   else
     printf(".");
