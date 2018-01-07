@@ -21,5 +21,6 @@ char * mactos(struct ether_addr *);
 void list_ip(u_int8_t, u_int8_t[], u_int);
 bool is_printable(u_char);
 void printc(u_char);
+void printdl(u_char[], int, int, int);
 
 #endif // __USEFUL_H

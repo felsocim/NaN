@@ -45,3 +45,16 @@ void printc(u_char __c) {
   else
     printf(".");
 }
+
+void printdl(u_char buffer[], int begin_at, int end_before, int padding) {
+  int i = 0, count = 0;
+  printf("%*c", padding, ' ');
+  for(i = begin_at; i < end_before; i++) {
+    if(buffer[i] == '\n' || count > 63) {
+      printf("\n%*c", padding, ' ');
+      count = 0;
+    }
+    printc(buffer[i]);
+    count++;
+  }
+}
