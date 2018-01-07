@@ -9,7 +9,6 @@ void finish(int signum) {
 	if(capture != NULL) {
 		printf("\nCapture halt.\n");
 		pcap_breakloop(capture);
-    pcap_close(capture);
 		return;
 	}
 
