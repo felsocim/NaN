@@ -55,6 +55,31 @@
 #define HTTP_VALID_METHODS_ARRAY { "OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT" }
 #define HTTP_VALID_METHODS_COUNT 8
 
+#define TELNETCTC_NOP 241
+#define TELNETCTC_DM 242
+#define TELNETCTC_IP 244
+#define TELNETCTC_AO 245
+#define TELNETCTC_AYT 246
+#define TELNETCTC_EC 247
+#define TELNETCTC_EL 248
+#define TELNETCTC_GA 249
+#define TELNETCTC_SB 250
+#define TELNETCTC_SE 240
+#define TELNETCTC_WILL 251
+#define TELNETCTC_WONT 252
+#define TELNETCTC_DO 253
+#define TELNETCTC_DONT 254
+#define TELNETCTC_IAC 255
+
+#define TELNETOPT_ECHO 1
+#define TELNETOPT_SUPPRESS_GO_AHEAD 3
+#define TELNETOPT_TERMINAL_TYPE 24 // with suboption
+#define TELNETOPT_WINDOW_SIZE 31
+#define TELNETOPT_TERMINAL_SPEED 32
+#define TELNETOPT_LINE_MODE 34
+#define TELNETOPT_ENVIRONMENT_VARIABLES 36
+#define TELNETOPT_NEW_ENVIRONMENT_VARIABLES 39
+
 #include <net/ethernet.h>
 #include <netinet/ether.h>
 #include <netinet/if_ether.h>
@@ -77,5 +102,6 @@ void process_bootp(const u_char *, long int, u_char);
 void process_bootp_vsopt(u_int8_t[], u_int, Bool, u_char);
 void process_smtp_ftp_pop_imap(const u_char *, char *, char *, long int, u_short, u_char, u_char);
 void process_http(const u_char *, long int, u_short, u_char, u_char);
+void process_telnet(const u_char *, long int, u_short, u_char, u_char);
 
 #endif // __PROCESS_H

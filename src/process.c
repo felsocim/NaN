@@ -419,6 +419,9 @@ void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbos
     case PROTO_WWW:
       process_http(packet, next, dlen, TP_REPLY | TP_SERVER, verbosity);
       break;
+    case PROTO_TELNET:
+      process_telnet(packet, next, dlen, TP_SERVER, verbosity);
+      break;
   }
 
   switch(destination) {
@@ -432,7 +435,7 @@ void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbos
 			// TODO: Call protocol tratment function
 			break;
     case PROTO_TELNET:
-			// TODO: Call protocol tratment function
+			process_telnet(packet, next, dlen, TP_CLIENT, verbosity);
 			break;
     case PROTO_SMTP:
       process_smtp_ftp_pop_imap(packet, "Simple Mail Transfer Protocol", "smtp", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
@@ -1093,6 +1096,165 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
         }
       }
       break;
+  }
+
+  printf("\n");
+}
+
+// TODO: Add missing default cases to verbosity level switches
+
+void process_telnet(const u_char * packet, long int offset, u_short length, u_char flags, u_char verbosity) {
+  u_char * data = (u_char *) (packet + offset);
+  char * source = (flags & TP_CLIENT) ? "client" : "server",
+    * destination = (flags & TP_CLIENT) ? "server" : "client";
+
+  bool optneg = (data[0] == TELNETCTC_IAC),
+    last = false,
+    suboption = false,
+    list = false,
+    label = false;
+
+  u_char last_opt = TELNETCTC_IAC;
+
+  int i = 1, by = 0;
+
+  switch (verbosity) {
+    case VERBOSITY_LOW:
+    case VERBOSITY_MEDIUM:
+      printf("telnet %s > %s %s", source, destination, (optneg ? "option negotiation\n" : ""));
+      // TODO: Print data character by character (implement appropriate function)
+      break;
+    case VERBOSITY_HIGH:
+      printf("          └─ \"Telnet message from %s to %s\"\n", source, destination);
+      if(optneg) {
+        printf("            └─ Options:\n");
+        while (i < length) {
+          last = (i + 1 == length);
+
+          if(data[i] == TELNETCTC_IAC) {
+            by = 1;
+            printf("\n");
+          } else if(last_opt == TELNETCTC_IAC) {
+            switch(data[i]) {
+              case TELNETCTC_NOP:
+  							printf("              ├─ No Operation\n");
+  							break;
+              case TELNETCTC_DM:
+  							printf("              ├─ Data Mark\n");
+  							break;
+              case TELNETCTC_IP:
+  							printf("              ├─ Interrupt Process\n");
+  							break;
+              case TELNETCTC_AO:
+  							printf("              ├─ Abort Output\n");
+  							break;
+              case TELNETCTC_AYT:
+  							printf("              ├─ Are You There?\n");
+  							break;
+              case TELNETCTC_EC:
+  							printf("              ├─ Erase Character\n");
+  							break;
+              case TELNETCTC_EL:
+  							printf("              ├─ Erase Line\n");
+  							break;
+              case TELNETCTC_GA:
+  							printf("              ├─ Go Ahead\n");
+  							break;
+              case TELNETCTC_SB:
+                suboption = true;
+                break;
+              case TELNETCTC_SE:
+                suboption = false;
+                label = false;
+                printf("\n");
+  							break;
+              case TELNETCTC_WILL:
+  							printf("              ├─ WILL");
+  							break;
+              case TELNETCTC_WONT:
+  							printf("              ├─ WON'T");
+  							break;
+              case TELNETCTC_DO:
+  							printf("              ├─ DO");
+  							break;
+              case TELNETCTC_DONT:
+  							printf("              ├─ DON'T");
+  							break;
+              default:
+                printf("              ├─ unknown (%u)\n", data[i]);
+                break;
+            }
+            if(data[i] >= TELNETCTC_WILL && data[i] <= TELNETCTC_DONT)
+              list = true;
+            by = 1;
+          } else if((suboption || list) && !label) {
+            switch(data[i]) {
+              case TELNETOPT_ECHO:
+  							printf("%secho", (suboption ? "                  - " : " "));
+  							break;
+              case TELNETOPT_SUPPRESS_GO_AHEAD:
+  							printf("%ssuppress-go-ahead", (suboption ? "                  - " : " "));
+  							break;
+              case TELNETOPT_TERMINAL_TYPE:
+  							printf("%sterminal-type", (suboption ? "                  - " : " "));
+  							break;
+              case TELNETOPT_WINDOW_SIZE:
+  							printf("%swindow-size", (suboption ? "                  - " : " "));
+  							break;
+              case TELNETOPT_TERMINAL_SPEED:
+  							printf("%sterminal-speed", (suboption ? "                  - " : " "));
+  							break;
+              case TELNETOPT_LINE_MODE:
+  							printf("%sline-mode", (suboption ? "                  - " : " "));
+  							break;
+              case TELNETOPT_ENVIRONMENT_VARIABLES:
+  							printf("%senvironment-variables", (suboption ? "                  - " : " "));
+  							break;
+              case TELNETOPT_NEW_ENVIRONMENT_VARIABLES:
+  							printf("%snew-environment-variables", (suboption ? "                  - " : " "));
+  							break;
+              default:
+                printf("%s", (suboption ? "                  - " : " "));
+                if(is_printable(data[i]))
+                  printf("%c", data[i]);
+                else
+                  printf("0x%X", data[i]);
+                break;
+            }
+            list = false;
+            if(suboption)
+              label = true;
+            by = 1;
+          } else if(suboption && label) {
+            if(last_opt == TELNETOPT_TERMINAL_TYPE) {
+              if(data[i] == 1)
+                printf(" required-value ");
+              by = 1;
+            } else if(last_opt == TELNETOPT_WINDOW_SIZE) {
+              printf(" width %u, ", ntohs(DESERIALIZE_UINT8TO16(data, i)));
+              int temp = i + 2;
+              printf("height %u ", ntohs(DESERIALIZE_UINT8TO16(data, temp)));
+              by = 4;
+            } else {
+              if(is_printable(data[i]))
+                printf("%c", data[i]);
+              else
+                printf("0x%X", data[i]);
+              by = 1;
+            }
+          }
+
+          last_opt = data[i];
+          i += by;
+        }
+      } else {
+        printf("            └─ Data: ");
+        for(i = 0; i < length; i++)
+          printc(data[i]);
+      }
+      break;
+    default:
+      failwith("Unknown verbosity level detected");
   }
 
   printf("\n");
