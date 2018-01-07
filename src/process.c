@@ -842,8 +842,6 @@ void process_smtp_ftp_pop_imap(const u_char * packet, char * lo_protocol, char *
   if(is_command && is_reply)
     failwith("Unexpected flags combination");
 
-  u_short i = 0;
-
   switch (verbosity) {
     case VERBOSITY_LOW:
     case VERBOSITY_MEDIUM:
@@ -851,21 +849,11 @@ void process_smtp_ftp_pop_imap(const u_char * packet, char * lo_protocol, char *
       break;
     case VERBOSITY_HIGH:
       printf("          └─ \"%s message from %s to %s\"\n", lo_protocol, source, destination);
-      int printed = 0;
       if(is_command || is_reply) // client's command line
         printf("            └─ %s:\n", (is_command ? "Client input" : "Server response"));
       else
         printf("            └─ Raw data:\n");
-      printf("                 ");
-      for(i = 0; i < size; i++) {
-        if((data[i] == 0xA && (i + 1) < size) || printed > 63) {
-          printf("\n                 ");
-          printed = 0;
-        } else if(data[i] != 0xD) {
-          printc(data[i]);
-          printed++;
-        }
-      }
+      printdl(data, 0, size, 17);
       break;
     default:
       failwith("Unknown verbosity level detected");
@@ -1014,16 +1002,7 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
       if(!validated) {
         printf("          └─ \"HTTP segment from %s to %s\"\n", source, destination);
         printf("            └─ Raw content:\n");
-        int i = 0, count = 0;
-        printf("                 ");
-        for(i = 0; i < length; i++) {
-          if(data[i] == '\n' || count > 63) {
-            printf("\n                 ");
-            count = 0;
-          }
-          printc(data[i]);
-          count++;
-        }
+        printdl((u_char *) data, 0, length, 17);
       } else if(is_command) {
         bool is_post = strcmp(method, "POST") == 0;
         printf("          └─ \"HTTP request from %s to %s\"\n", source, destination);
@@ -1049,16 +1028,7 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
         }
         if(is_post) {
           printf("            └─ POST data:\n");
-          int at = i, count = 0;
-          printf("                 ");
-          for(i = at; i < length; i++) {
-            if(headers[i] == '\n' || count > 63) {
-              printf("\n                 ");
-              count = 0;
-            }
-            printc(headers[i]);
-            count++;
-          }
+          printdl((u_char *) headers, i, length, 17);
         }
       } else if(is_reply) {
         printf("          └─ \"HTTP response from %s to %s\"\n", source, destination);
@@ -1083,17 +1053,7 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
           i++;
         }
         printf("\n            └─ Body:\n");
-        long int shift = headers - data;
-        int at = (int) shift + i, count = 0;
-        printf("                 ");
-        for(i = at; i < length; i++) {
-          if(data[i] == '\n' || count > 63) {
-            printf("\n                ");
-            count = 0;
-          }
-          printc(data[i]);
-          count++;
-        }
+        printdl((u_char *) data, (int) (headers - data + i), length, 17);
       }
       break;
   }
