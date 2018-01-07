@@ -1212,8 +1212,7 @@ void process_telnet(const u_char * packet, long int offset, u_short length, u_ch
               by = 1;
             } else if(last_opt == TELNETOPT_WINDOW_SIZE) {
               printf("width %u, ", ntohs(DESERIALIZE_UINT8TO16(data, i)));
-              int temp = i + 2;
-              printf("height %u ", ntohs(DESERIALIZE_UINT8TO16(data, temp)));
+              printf("height %u ", ntohs(DESERIALIZE_UINT8TO16(data, i + 2)));
               by = 4;
             } else {
               printf("%02x", data[i]);
