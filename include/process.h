@@ -52,6 +52,9 @@
   #define DESERIALIZE_UINT32(_UINT8_ARRAY) (0x0 | _UINT8_ARRAY[0] << 24 | _UINT8_ARRAY[1] << 16 | _UINT8_ARRAY[2] << 8 | _UINT8_ARRAY[3])
 #endif
 
+#define HTTP_VALID_METHODS_ARRAY { "OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT" }
+#define HTTP_VALID_METHODS_COUNT 8
+
 #include <net/ethernet.h>
 #include <netinet/ether.h>
 #include <netinet/if_ether.h>
@@ -73,5 +76,6 @@ void process_tcp(const u_char *, Bool, u_short, u_char);
 void process_bootp(const u_char *, long int, u_char);
 void process_bootp_vsopt(u_int8_t[], u_int, Bool, u_char);
 void process_smtp_ftp_pop(const u_char *, char *, char *, long int, u_short, u_char, u_char);
+void process_http(const u_char *, long int, u_short, u_char, u_char);
 
 #endif // __PROCESS_H

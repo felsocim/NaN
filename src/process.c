@@ -413,6 +413,9 @@ void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbos
     case PROTO_POP3:
       process_smtp_ftp_pop(packet, "Post Office Protocol", "pop", next, dlen, TP_REPLY | TP_SERVER, verbosity);
       break;
+    case PROTO_WWW:
+      process_http(packet, next, dlen, TP_REPLY | TP_SERVER, verbosity);
+      break;
   }
 
   switch(destination) {
@@ -438,7 +441,7 @@ void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbos
 			// TODO: Call protocol tratment function
 			break;
     case PROTO_WWW:
-			// TODO: Call protocol tratment function
+			process_http(packet, next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
 			break;
     case PROTO_IMAP:
 			// TODO: Call protocol tratment function
@@ -833,6 +836,9 @@ void process_smtp_ftp_pop(const u_char * packet, char * lo_protocol, char * sh_p
     * destination = (flags & TP_CLIENT) ? "server" : "client";
   bool is_command = flags & TP_COMMAND, is_reply = flags & TP_REPLY;
 
+  if(is_command && is_reply)
+    failwith("Unexpected flags combination");
+
   u_short i = 0;
 
   switch (verbosity) {
@@ -860,6 +866,233 @@ void process_smtp_ftp_pop(const u_char * packet, char * lo_protocol, char * sh_p
       break;
     default:
       failwith("Unknown verbosity level detected");
+  }
+
+  printf("\n");
+}
+
+void process_http(const u_char * packet, long int offset, u_short length, u_char flags, u_char verbosity) {
+  char * data = (char *) (packet + offset);
+  char * source = (flags & TP_CLIENT) ? "client" : "server",
+    * destination = (flags & TP_CLIENT) ? "server" : "client";
+  bool is_command = flags & TP_COMMAND, is_reply = flags & TP_REPLY;
+  char * request = NULL,
+    * method = NULL,
+    * uri = NULL,
+    * link = NULL,
+    * version = NULL,
+    * release = NULL,
+    * headers = NULL;
+
+  if(is_command && is_reply)
+    failwith("Unexpected flags combination");
+
+  bool validated = false;
+
+  headers = strchr(data, '\n');
+
+  long int headers_length = headers - data,
+    method_length = 0,
+    link_length = 0,
+    release_length = 0;
+
+  int i = 0;
+
+  if(headers != NULL && headers_length > 0) {
+    validated = true;
+    headers += 1;
+  }
+
+  if(validated) {
+    validated = false;
+    request = (char *) malloc((headers_length + 1) * sizeof(char));
+
+    if(request == NULL)
+      failwith("Failed to reserve memory for HTTP request string");
+
+    for(i = 0; i < (headers - data); i++)
+      request[i] = data[i];
+
+    request[(headers - data)] = '\0';
+
+    uri = strchr(request, 0x20);
+
+    method_length = uri - request - 1;
+
+    if(uri != NULL && method_length > 0) {
+      validated = true;
+      uri += 1;
+    }
+  }
+
+  if(validated) {
+    validated = false;
+    method = (char *) malloc((method_length + 1) * sizeof(char));
+
+    if(method == NULL)
+      failwith("Failed to reserve memory for HTTP method string");
+
+    for(i = 0; i < method_length; i++)
+      method[i] = request[i];
+
+    method[method_length] = '\0';
+
+    int v = 0;
+    if(is_command) {
+      char * valid_methods[] = HTTP_VALID_METHODS_ARRAY;
+      for(v = 0; v < HTTP_VALID_METHODS_COUNT; v++) {
+        if(strcmp(valid_methods[v], method) == 0) {
+          validated = true;
+          break;
+        }
+      }
+    }
+
+    validated = true;
+
+    if(is_reply) {
+      char * valid_version = "HTTP/";
+      for(v = 0; v < 5; v++) {
+        if(valid_version[v] != method[v]) {
+          validated = false;
+          break;
+        }
+      }
+    }
+  }
+
+  if(validated) {
+    version = strchr(uri, 0x20) + 1;
+
+    if(version == NULL)
+      failwith("Failed to parse HTTP request string");
+
+    link_length = version - uri - 1;
+
+    link = (char *) malloc((link_length + 1) * sizeof(char));
+
+    if(link == NULL)
+      failwith("Failed to reserve memory for HTTP link string");
+
+    for(i = 0; i < link_length; i++)
+      link[i] = uri[i];
+
+    link[link_length] = '\0';
+
+    release_length = headers - (data + method_length + link_length);
+
+    release = (char *) malloc((release_length + 1) * sizeof(char));
+
+    if(release == NULL)
+      failwith("Failed to reserve memory for HTTP release string");
+
+    for(i = 0; i < release_length; i++)
+      release[i] = version[i];
+
+    release[release_length] = '\0';
+  }
+
+  switch (verbosity) {
+    case VERBOSITY_LOW:
+      printf("http %s > %s ", source, destination);
+      if(validated)
+        printf("method %s, version %s\n", method, release);
+      else
+        printf("raw data segment\n");
+      break;
+    case VERBOSITY_MEDIUM:
+      printf("http %s > %s ", source, destination);
+      if(validated)
+        printf("method %s, uri %s, version %s\n", method, link, release);
+      else
+        printf("raw data segment\n");
+      break;
+    case VERBOSITY_HIGH:
+      if(!validated) {
+        printf("          └─ \"HTTP segment from %s to %s\"\n", source, destination);
+        printf("            └─ Raw content:\n");
+        int i = 0, count = 0;
+        printf("                 ");
+        for(i = 0; i < length; i++) {
+          if(data[i] == '\n' || count > 63) {
+            printf("\n                 ");
+            count = 0;
+          }
+          printc(data[i]);
+          count++;
+        }
+      } else if(is_command) {
+        bool is_post = strcmp(method, "POST") == 0;
+        printf("          └─ \"HTTP request from %s to %s\"\n", source, destination);
+        printf("            ├─ Method: %s\n", method);
+        printf("            ├─ Unique Resource Identifier (URI): %s\n", link);
+        printf("            ├─ Version: %s", release);
+        printf("            %s─ Headers:\n", (is_post ? "├" : "└"));
+        int i = 0, last = -3;
+        bool stop = false;
+        printf("            %s    ", (is_post ? "│" : " "));
+        while(!stop) {
+          if(headers[i] == '\n') {
+            if(i - last < 3) {
+              stop = true;
+            } else {
+              printf("\n            %s    ", (is_post ? "│" : " "));
+              last = i;
+            }
+          } else {
+            printc(headers[i]);
+          }
+          i++;
+        }
+        if(is_post) {
+          printf("            └─ POST data:\n");
+          int at = i, count = 0;
+          printf("                 ");
+          for(i = at; i < length; i++) {
+            if(headers[i] == '\n' || count > 63) {
+              printf("\n                 ");
+              count = 0;
+            }
+            printc(headers[i]);
+            count++;
+          }
+        }
+      } else if(is_reply) {
+        printf("          └─ \"HTTP response from %s to %s\"\n", source, destination);
+        printf("            ├─ Version: %s\n", method);
+        printf("            ├─ Code: %s\n", link);
+        printf("            ├─ Phrase: %s", release);
+        printf("            ├─ Headers:\n");
+        int i = 0, last = -3;
+        bool stop = false;
+        printf("            │    ");
+        while(!stop) {
+          if(headers[i] == '\n') {
+            if(i - last < 3) {
+              stop = true;
+            } else {
+              printf("\n            │    ");
+              last = i;
+            }
+          } else {
+            printc(headers[i]);
+          }
+          i++;
+        }
+        printf("\n            └─ Body:\n");
+        long int shift = headers - data;
+        int at = (int) shift + i, count = 0;
+        printf("                 ");
+        for(i = at; i < length; i++) {
+          if(data[i] == '\n' || count > 63) {
+            printf("\n                ");
+            count = 0;
+          }
+          printc(data[i]);
+          count++;
+        }
+      }
+      break;
   }
 
   printf("\n");
