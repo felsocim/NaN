@@ -26,6 +26,8 @@ Le programme est capable d'extraire des informations des protocoles suivants :
 
 ## Fonctionnement du programme
 
+Comment compiler et lancer le programme ?
+
 ### Compilation
 Pour pouvoir compiler le programme il faut avoir installé la librairie 'pcap' sur le système. Le paquet correspondant est *libpcap0.8-dev* installable depuis le dépôt de logiciels d'Ubuntu ou autre distribution de Linux.
 
