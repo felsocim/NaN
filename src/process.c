@@ -67,9 +67,6 @@ void process_ipv4(const u_char * packet, u_char verbosity) {
     case PROTO_UDP:
       process_udp(packet, false, verbosity);
       break;
-    case PROTO_SCTP:
-      // TODO: Call protocol tratment function
-      break;
     default:
       break;
   }
@@ -123,9 +120,6 @@ void process_ipv6(const u_char * packet, u_char verbosity) {
       break;
     case PROTO_UDP:
       process_udp(packet, true, verbosity);
-      break;
-    case PROTO_SCTP:
-      // TODO: Call protocol tratment function
       break;
     default:
       break;
@@ -257,7 +251,7 @@ void process_udp(const u_char * packet, bool ipv6, u_char verbosity) {
 
   if(dlen > 0) {
     long int next = sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + sizeof(struct udphdr);
-    bool bootp = false;
+    bool bootp = false, unknown = false;
 
     switch (source) {
       case PROTO_DNS:
@@ -269,6 +263,7 @@ void process_udp(const u_char * packet, bool ipv6, u_char verbosity) {
         bootp = true;
         break;
       default:
+        unknown = true;
         break;
     }
 
@@ -282,8 +277,12 @@ void process_udp(const u_char * packet, bool ipv6, u_char verbosity) {
           process_bootp(packet, next, verbosity);
         break;
       default:
+        unknown = true;
         break;
     }
+
+    if(unknown)
+      printf("\n");
   }
 }
 
@@ -321,70 +320,70 @@ void process_tcp(const u_char * packet, bool ipv6, u_short length, u_char verbos
       printf("        ├─ Checksum: 0x%X\n", checksum);
       printf("        ├─ Urgent pointer: 0x%X\n", urgent_pointer);
       printf("        %s Flags: ", (offset > 5 ? "├─" : "└─"));
+      if(header->th_flags & TH_FIN)
+        printf("FIN ");
+      if(header->th_flags & TH_SYN)
+        printf("SYN ");
+      if(header->th_flags & TH_RST)
+        printf("RST ");
+      if(header->th_flags & TH_PUSH)
+        printf("PSH ");
+      if(header->th_flags & TH_ACK)
+        printf("ACK ");
+      if(header->th_flags & TH_URG)
+        printf("URG ");
+      if ((header->th_flags == 0 || header->th_flags > 63) && verbosity == VERBOSITY_HIGH)
+        printf("none");
+
+      printf("\n");
+
+      if(offset > 5) {
+        printf("        └─ Options: ");
+        u_char * options = ((u_char *) header) + 20;
+        int k = 0, limit = (int) (offset * 4 - 20);
+
+        while(k < limit) {
+          switch(options[k]) {
+            case TCPOPT_NOP:
+              printf("no-operation ");
+              k++;
+              break;
+            case TCPOPT_MSS:
+              k += 2;
+              printf("maximum-segment-size %u byte(s) ", ntohs(DESERIALIZE_UINT8TO16(options, k)));
+              k += 2;
+              break;
+            case TCPOPT_WS:
+              k += 2;
+              printf("window-scale %u ", options[k]);
+              k++;
+              break;
+            case 4: // TCPOPT_SACK
+              printf("sack-permitted ");
+              k += 2;
+              break;
+            case TCPOPT_TSTMP:
+              k += 2;
+              printf("echo+timestamp %u", ntohl(DESERIALIZE_UINT8TO32(options, k)));
+              k += 4;
+              printf(" %u ", ntohl(DESERIALIZE_UINT8TO32(options, k)));
+              k += 4;
+              break;
+            default:
+              k += options[k + 1];
+              break;
+          }
+        }
+        printf("\n");
+      }
       break;
     default:
       failwith("Unknown verbosity level detected");
   }
 
-  if(header->th_flags & TH_FIN)
-    printf("FIN ");
-  if(header->th_flags & TH_SYN)
-    printf("SYN ");
-  if(header->th_flags & TH_RST)
-    printf("RST ");
-  if(header->th_flags & TH_PUSH)
-    printf("PSH ");
-  if(header->th_flags & TH_ACK)
-    printf("ACK ");
-  if(header->th_flags & TH_URG)
-    printf("URG ");
-  if ((header->th_flags == 0 || header->th_flags > 63) && verbosity == VERBOSITY_HIGH)
-    printf("none");
-
-  printf("\n");
-
-  if(offset > 5 && verbosity == VERBOSITY_HIGH) {
-    printf("        └─ Options: ");
-    u_char * options = ((u_char *) header) + 20;
-    int k = 0, limit = (int) (offset * 4 - 20);
-
-    while(k < limit) {
-      switch(options[k]) {
-        case TCPOPT_NOP:
-          printf("no-operation ");
-          k++;
-          break;
-        case TCPOPT_MSS:
-          k += 2;
-          printf("maximum-segment-size %u byte(s) ", ntohs(DESERIALIZE_UINT8TO16(options, k)));
-          k += 2;
-          break;
-        case TCPOPT_WS:
-          k += 2;
-          printf("window-scale %u ", options[k]);
-          k++;
-          break;
-        case 4: // TCPOPT_SACK
-          printf("sack-permitted ");
-          k += 2;
-          break;
-        case TCPOPT_TSTMP:
-          k += 2;
-          printf("echo+timestamp %u", ntohl(DESERIALIZE_UINT8TO32(options, k)));
-          k += 4;
-          printf(" %u ", ntohl(DESERIALIZE_UINT8TO32(options, k)));
-          k += 4;
-          break;
-        default:
-          k += options[k + 1];
-          break;
-      }
-    }
-    printf("\n");
-  }
-
   if(dlen > 0) {
     long int next = sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + (offset * 4);
+    bool unknown = false;
 
     switch (source) {
       case PROTO_SMTP:
@@ -409,6 +408,7 @@ void process_tcp(const u_char * packet, bool ipv6, u_short length, u_char verbos
         process_telnet(packet, next, dlen, TP_SERVER, verbosity);
         break;
       default:
+        unknown = true;
         break;
     }
 
@@ -435,8 +435,12 @@ void process_tcp(const u_char * packet, bool ipv6, u_short length, u_char verbos
   			process_smtp_ftp_pop_imap(packet, "Post Office Protocol", "pop", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
   			break;
       default:
+        unknown = true;
         break;
     }
+
+    if(unknown)
+      printf("\n");
   }
 }
 
@@ -967,14 +971,14 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
       if(validated)
         printf("method %s, version %s\n", method, release);
       else
-        printf("raw data segment\n");
+        printf("raw data segment");
       break;
     case VERBOSITY_MEDIUM:
       printf("http %s > %s ", source, destination);
       if(validated)
         printf("method %s, uri %s, version %s\n", method, link, release);
       else
-        printf("raw data segment\n");
+        printf("raw data segment");
       break;
     case VERBOSITY_HIGH:
       if(!validated) {
@@ -1033,12 +1037,11 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
         printf("\n            └─ Body:\n");
         printdl((u_char *) data, (int) (headers - data + i), length, 17);
       }
+      printf("\n");
       break;
     default:
       failwith("Unknown verbosity level detected");
   }
-
-  printf("\n");
 }
 
 void process_telnet(const u_char * packet, long int offset, u_short length, u_char flags, u_char verbosity) {
@@ -1058,8 +1061,11 @@ void process_telnet(const u_char * packet, long int offset, u_short length, u_ch
   switch (verbosity) {
     case VERBOSITY_LOW:
     case VERBOSITY_MEDIUM:
-      printf("telnet %s > %s %s", source, destination, (optneg ? "option negotiation\n" : ""));
-      // TODO: Print data character by character (implement appropriate function)
+      printf("telnet %s > %s %s", source, destination, (optneg ? "option negotiation\n" : ": "));
+      if(!optneg) {
+        for(i = 0; i < length; i++)
+          printc(data[i]);
+      }
       break;
     case VERBOSITY_HIGH:
       printf("          └─ \"Telnet message from %s to %s\"\n", source, destination);
