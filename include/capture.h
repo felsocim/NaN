@@ -3,7 +3,6 @@
 
 #define MAX_SNAPSHOT_LENGTH 1600
 #define MAX_TIMESTAMP_LENGTH 64
-#define MAC_ADDRESS_LENGTH 17
 
 #include <time.h>
 #include <netinet/ether.h>

@@ -1,14 +1,12 @@
 #ifndef __PROCESS_H
 #define __PROCESS_H
 
-#define MAC_ADDRESS_LENGTH 17
 #define IPV4_PACKET_FLAGS_LENGTH 4
 
 #define VERBOSITY_LOW 0x31
 #define VERBOSITY_MEDIUM 0x32
 #define VERBOSITY_HIGH 0x33
 
-// TODO: To be simplified
 #define ARP_REQUEST 0
 #define ARP_REPLY 1
 #define ARP_UNKNOWN 2
@@ -26,7 +24,7 @@
 #define PROTO_DNS 53
 #define PROTO_BOOTPS 67
 #define PROTO_BOOTPC 68
-#define PROTO_WWW 80 // DNS & HTTP
+#define PROTO_HTTP 80
 #define PROTO_IMAP 143
 #define PROTO_IMAP3 220
 #define PROTO_IMAPS 993
@@ -46,12 +44,6 @@
 #define TP_DATA 0x4
 #define TP_CLIENT 0x8
 #define TP_SERVER 0x10
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-  #define DESERIALIZE_UINT32(_UINT8_ARRAY) (0x0 | _UINT8_ARRAY[3] << 24 | _UINT8_ARRAY[2] << 16 | _UINT8_ARRAY[1] << 8 | _UINT8_ARRAY[0])
-#else
-  #define DESERIALIZE_UINT32(_UINT8_ARRAY) (0x0 | _UINT8_ARRAY[0] << 24 | _UINT8_ARRAY[1] << 16 | _UINT8_ARRAY[2] << 8 | _UINT8_ARRAY[3])
-#endif
 
 #define HTTP_VALID_METHODS_ARRAY { "OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT" }
 #define HTTP_VALID_METHODS_COUNT 8
@@ -87,6 +79,8 @@
 #define TELNETOPT_ENCRYPTION_OPTION 38
 #define TELNETOPT_NEW_ENVIRONMENT_VARIABLES 39
 
+#define __EXTENDED_DNS false
+
 #include <net/ethernet.h>
 #include <netinet/ether.h>
 #include <netinet/if_ether.h>
@@ -103,17 +97,20 @@
 
 void process_ipv4(const u_char *, u_char);
 void process_ipv6(const u_char *, u_char);
-void process_arp(const u_char *, Bool, u_char);
-void process_udp(const u_char *, Bool, u_char);
-void process_tcp(const u_char *, Bool, u_short, u_char);
+void process_arp(const u_char *, bool, u_char);
+void process_udp(const u_char *, bool, u_char);
+void process_tcp(const u_char *, bool, u_short, u_char);
 void process_bootp(const u_char *, long int, u_char);
-void process_bootp_vsopt(u_int8_t[], u_int, Bool, u_char);
+void process_bootp_vsopt(u_int8_t[], u_int, bool, u_char);
 void process_smtp_ftp_pop_imap(const u_char *, char *, char *, long int, u_short, u_char, u_char);
 void process_http(const u_char *, long int, u_short, u_char, u_char);
 void process_telnet(const u_char *, long int, u_short, u_char, u_char);
 void process_dns(const u_char *, long int, u_short, u_char, u_char);
+
+#if __EXTENDED_DNS == true
 void process_dns_sections(u_char *, u_short[], u_char *);
 int print_dns_section_entry(u_char *, int);
 int print_dns_simple(u_char *, int);
+#endif
 
 #endif // __PROCESS_H

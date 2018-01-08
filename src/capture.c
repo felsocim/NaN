@@ -38,9 +38,7 @@ pcap_t * get_online_capture(char * device, char * filter) {
 		return NULL;
 	}
 
-#if DEBUG
 	printf("Capture created for device: %s\n", dev);
-#endif
 
 	return capture;
 }
@@ -54,7 +52,6 @@ pcap_t * get_offline_capture(char * trace) {
 		return NULL;
 	}
 
-	// Debug
 	printf("Capture created from file: %s\n", trace);
 
 	return capture;
@@ -143,10 +140,10 @@ void got_packet(u_char * args, const struct pcap_pkthdr * header, const u_char *
 			process_ipv6(packet, *args);
 			break;
     case ETHERTYPE_ARP: // Address Resolution Protocol
-      process_arp(packet, False, *args);
+      process_arp(packet, false, *args);
       break;
     case ETHERTYPE_REVARP: // Reverse Address Resolution Protocol
-      process_arp(packet, True, *args);
+      process_arp(packet, true, *args);
       break;
 		default: // Unsupported packet types
       printf("%sunsupported EtherType [value: 0x%X]", (*args == VERBOSITY_HIGH ? "  └─ " : ""), type);
@@ -162,8 +159,6 @@ void got_packet(u_char * args, const struct pcap_pkthdr * header, const u_char *
 }
 
 int init_capture(pcap_t * capture, int nb_packets, u_char verbosity) {
-#if DEBUG == 1
 	printf("Starting pcap loop with verbosity level set to %c\n", verbosity);
-#endif
 	return pcap_loop(capture, nb_packets, got_packet, &verbosity);
 }

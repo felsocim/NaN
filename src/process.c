@@ -62,10 +62,10 @@ void process_ipv4(const u_char * packet, u_char verbosity) {
 
   switch(header->ip_p) {
     case PROTO_TCP:
-      process_tcp(packet, False, ntohs(header->ip_len) - sizeof(struct ip), verbosity);
+      process_tcp(packet, false, ntohs(header->ip_len) - sizeof(struct ip), verbosity);
       break;
     case PROTO_UDP:
-      process_udp(packet, False, verbosity);
+      process_udp(packet, false, verbosity);
       break;
     case PROTO_SCTP:
       // TODO: Call protocol tratment function
@@ -119,10 +119,10 @@ void process_ipv6(const u_char * packet, u_char verbosity) {
 
   switch(header->ip6_nxt) {
     case PROTO_TCP:
-      process_tcp(packet, True, ntohs(header->ip6_plen) - sizeof(struct ip6_hdr), verbosity);
+      process_tcp(packet, true, ntohs(header->ip6_plen) - sizeof(struct ip6_hdr), verbosity);
       break;
     case PROTO_UDP:
-      process_udp(packet, True, verbosity);
+      process_udp(packet, true, verbosity);
       break;
     case PROTO_SCTP:
       // TODO: Call protocol tratment function
@@ -136,13 +136,11 @@ void process_ipv6(const u_char * packet, u_char verbosity) {
 	free(destination);
 }
 
-void process_arp(const u_char * packet, Bool reverse, u_char verbosity) {
+void process_arp(const u_char * packet, bool reverse, u_char verbosity) {
   // ARP header parsing
 	const struct ether_arp * header = (struct ether_arp *) (packet + sizeof(struct ether_header));
-
-  Bool unsupported = False;
-
-  unsigned short int operation = ntohs(header->arp_op);
+  bool unsupported = false;
+  u_short operation = ntohs(header->arp_op);
 
   // Select hardware type
   switch(ntohs(header->arp_hrd)) {
@@ -160,10 +158,8 @@ void process_arp(const u_char * packet, Bool reverse, u_char verbosity) {
         hw_source = strcpy(hw_source, ether_ntoa((struct ether_addr *) header->arp_sha));
         hw_destination = strcpy(hw_destination, ether_ntoa((struct ether_addr *) header->arp_tha));
 
-        // TODO: Check if it is IPv4 (see ARP header)
-
-        u_int32_t ips = DESERIALIZE_UINT32(header->arp_spa);
-        u_int32_t ipd = DESERIALIZE_UINT32(header->arp_tpa);
+        u_int32_t ips = DESERIALIZE_UINT8TO32(header->arp_spa, 0);
+        u_int32_t ipd = DESERIALIZE_UINT8TO32(header->arp_tpa, 0);
 
         struct in_addr s_ips, s_ipd;
         s_ips.s_addr = ips;
@@ -218,21 +214,21 @@ void process_arp(const u_char * packet, Bool reverse, u_char verbosity) {
         free(ip_source);
         free(ip_destination);
       } else {
-        unsupported = True;
+        unsupported = true;
       }
       break;
     // Eventually add support for other hardware types
     default:
-      unsupported = True;
+      unsupported = true;
       break;
   }
 
   if(unsupported) {
-    printf("unsupported address resolution packet\n");
+    printf("unsupported address resolution packet type\n");
   }
 }
 
-void process_udp(const u_char * packet, Bool ipv6, u_char verbosity) {
+void process_udp(const u_char * packet, bool ipv6, u_char verbosity) {
 	// UDP header parsing
 	const struct udphdr * header = (struct udphdr *) (packet + sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)));
 
@@ -241,9 +237,11 @@ void process_udp(const u_char * packet, Bool ipv6, u_char verbosity) {
     length = ntohs(header->len),
     checksum = ntohs(header->check);
 
+  u_short dlen = length - 8;
+
   switch(verbosity) {
     case VERBOSITY_LOW:
-      printf("udp src %u, dst %u \n", source, destination);
+      printf("udp src %u, dst %u%c", source, destination, (dlen > 0 ? ' ' : '\n'));
       break;
     case VERBOSITY_MEDIUM:
       printf("udp src %u, dst %u, len %u\n", source, destination, length);
@@ -257,63 +255,39 @@ void process_udp(const u_char * packet, Bool ipv6, u_char verbosity) {
       failwith("Unknown verbosity level detected");
   }
 
-  u_short dlen = length - 8;
-  long int next = sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + sizeof(struct udphdr);
+  if(dlen > 0) {
+    long int next = sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + sizeof(struct udphdr);
+    bool bootp = false;
 
-  switch (source) {
-    case PROTO_DNS:
-      process_dns(packet, next, dlen, TP_SERVER, verbosity);
-      break;
-    case PROTO_BOOTPS:
-      process_bootp(packet, next, verbosity);
-      break;
-  }
+    switch (source) {
+      case PROTO_DNS:
+        process_dns(packet, next, dlen, TP_SERVER, verbosity);
+        break;
+      case PROTO_BOOTPC:
+      case PROTO_BOOTPS:
+        process_bootp(packet, next, verbosity);
+        bootp = true;
+        break;
+      default:
+        break;
+    }
 
-  switch(destination) {
-    case PROTO_DNS:
-      process_dns(packet, next, dlen, TP_CLIENT, verbosity);
-      break;
-    case PROTO_FTPC:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_SSH:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_TELNET:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_SMTP:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_BOOTPS:
-    case PROTO_BOOTPC:
-			process_bootp(packet, sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + sizeof(struct udphdr), verbosity);
-			break;
-    case PROTO_WWW:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_IMAP:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_IMAP3:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_IMAPS:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_POP2:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_POP3:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_POPS:
-			// TODO: Call protocol tratment function
-			break;
+    switch(destination) {
+      case PROTO_DNS:
+        process_dns(packet, next, dlen, TP_CLIENT, verbosity);
+        break;
+      case PROTO_BOOTPC:
+      case PROTO_BOOTPS:
+        if(!bootp)
+          process_bootp(packet, next, verbosity);
+        break;
+      default:
+        break;
+    }
   }
 }
 
-void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbosity) {
+void process_tcp(const u_char * packet, bool ipv6, u_short length, u_char verbosity) {
 	// TCP header parsing
 	const struct tcphdr * header = (struct tcphdr *) (packet + sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)));
 
@@ -329,12 +303,14 @@ void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbos
     checksum = ntohs(header->th_sum),
     urgent_pointer = ntohs(header->th_urp);
 
+  u_short dlen = length - (offset * 4);
+
   switch(verbosity) {
     case VERBOSITY_LOW:
-      printf("tcp src %u, dst %u, ack %u ", source, destination, acknowledgement);
+      printf("tcp src %u, dst %u, ack %u%c", source, destination, acknowledgement, (dlen > 1 ? ' ' : '\n'));
       break;
     case VERBOSITY_MEDIUM:
-      printf("tcp src %u, dst %u, ack %u, seq %u ", source, destination, acknowledgement, sequence);
+      printf("tcp src %u, dst %u, ack %u, seq %u\n", source, destination, acknowledgement, sequence);
       break;
     case VERBOSITY_HIGH:
       printf("      └─ \"TCP packet\" from port %u to port %u\n", source, destination);
@@ -369,112 +345,98 @@ void process_tcp(const u_char * packet, Bool ipv6, u_short length, u_char verbos
 
   if(offset > 5 && verbosity == VERBOSITY_HIGH) {
     printf("        └─ Options: ");
-    u_int8_t * options = ((u_int8_t *) header) + 20;
-    u_int8_t * eol = options + ((offset - 5) * 4);
+    u_char * options = ((u_char *) header) + 20;
+    int k = 0, limit = (int) (offset * 4 - 20);
 
-    while((eol - options) >= 0) {
-      switch(*options) {
+    while(k < limit) {
+      switch(options[k]) {
         case TCPOPT_NOP:
           printf("no-operation ");
-          options += 1;
+          k++;
           break;
         case TCPOPT_MSS:
-          options += 2;
-          printf("maximum-segment-size %u byte(s) ", ntohs((u_int16_t)*options));
-          options += 2;
+          k += 2;
+          printf("maximum-segment-size %u byte(s) ", ntohs(DESERIALIZE_UINT8TO16(options, k)));
+          k += 2;
           break;
         case TCPOPT_WS:
-          options += 2;
-          printf("window-scale %u ", *options);
-          options += 1;
+          k += 2;
+          printf("window-scale %u ", options[k]);
+          k++;
           break;
-        case TCPOPT_SACK:
+        case 4: // TCPOPT_SACK
           printf("sack-permitted ");
-          options += 1;
+          k += 2;
           break;
         case TCPOPT_TSTMP:
-          options += 2;
-          printf("echo+timestamp %u", (u_int32_t)(*options));
-          options += 4;
-          printf(" %u ", (u_int32_t)(*options));
-          options += 4;
+          k += 2;
+          printf("echo+timestamp %u", ntohl(DESERIALIZE_UINT8TO32(options, k)));
+          k += 4;
+          printf(" %u ", ntohl(DESERIALIZE_UINT8TO32(options, k)));
+          k += 4;
           break;
         default:
-          options += 1;
-          options += *options;
+          k += options[k + 1];
           break;
       }
     }
-
     printf("\n");
   }
 
-  unsigned short int dlen = length - (offset * 4);
+  if(dlen > 0) {
+    long int next = sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + (offset * 4);
 
-  if(dlen < 1) // if the data part is empty parsing is finished
-    return;
+    switch (source) {
+      case PROTO_SMTP:
+        process_smtp_ftp_pop_imap(packet, "Simple Mail Transfer Protocol", "smtp", next, dlen, TP_REPLY | TP_SERVER, verbosity);
+        break;
+      case PROTO_FTPC:
+        process_smtp_ftp_pop_imap(packet, "File Transfer Protocol", "ftp", next, dlen, TP_REPLY | TP_SERVER, verbosity);
+        break;
+      case PROTO_FTPD:
+        process_smtp_ftp_pop_imap(packet, "File Transfer Protocol", "ftp", next, dlen, TP_DATA | TP_SERVER, verbosity);
+        break;
+      case PROTO_POP3:
+        process_smtp_ftp_pop_imap(packet, "Post Office Protocol", "pop", next, dlen, TP_REPLY | TP_SERVER, verbosity);
+        break;
+      case PROTO_IMAP:
+        process_smtp_ftp_pop_imap(packet, "Internet Message Access Protocol", "imap", next, dlen, TP_REPLY | TP_SERVER, verbosity);
+        break;
+      case PROTO_HTTP:
+        process_http(packet, next, dlen, TP_REPLY | TP_SERVER, verbosity);
+        break;
+      case PROTO_TELNET:
+        process_telnet(packet, next, dlen, TP_SERVER, verbosity);
+        break;
+      default:
+        break;
+    }
 
-  long int next = sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + (offset * 4);
-  //unsigned short int proto = 0x0;
-
-  switch (source) {
-    case PROTO_SMTP:
-      process_smtp_ftp_pop_imap(packet, "Simple Mail Transfer Protocol", "smtp", next, dlen, TP_REPLY | TP_SERVER, verbosity);
-      break;
-    case PROTO_FTPC:
-      process_smtp_ftp_pop_imap(packet, "File Transfer Protocol", "ftp", next, dlen, TP_REPLY | TP_SERVER, verbosity);
-      break;
-    case PROTO_FTPD:
-      process_smtp_ftp_pop_imap(packet, "File Transfer Protocol", "ftp", next, dlen, TP_DATA | TP_SERVER, verbosity);
-      break;
-    case PROTO_POP3:
-      process_smtp_ftp_pop_imap(packet, "Post Office Protocol", "pop", next, dlen, TP_REPLY | TP_SERVER, verbosity);
-      break;
-    case PROTO_IMAP:
-      process_smtp_ftp_pop_imap(packet, "Internet Message Access Protocol", "imap", next, dlen, TP_REPLY | TP_SERVER, verbosity);
-      break;
-    case PROTO_WWW:
-      process_http(packet, next, dlen, TP_REPLY | TP_SERVER, verbosity);
-      break;
-    case PROTO_TELNET:
-      process_telnet(packet, next, dlen, TP_SERVER, verbosity);
-      break;
-  }
-
-  switch(destination) {
-    case PROTO_FTPC:
-      process_smtp_ftp_pop_imap(packet, "File Transfer Protocol", "ftp", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
-      break;
-    case PROTO_FTPD:
-      process_smtp_ftp_pop_imap(packet, "File Transfer Protocol", "ftp", next, dlen, TP_DATA | TP_CLIENT, verbosity);
-      break;
-    case PROTO_SSH:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_TELNET:
-			process_telnet(packet, next, dlen, TP_CLIENT, verbosity);
-			break;
-    case PROTO_SMTP:
-      process_smtp_ftp_pop_imap(packet, "Simple Mail Transfer Protocol", "smtp", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
-			break;
-    case PROTO_BOOTPS:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_BOOTPC:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_WWW:
-			process_http(packet, next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
-			break;
-    case PROTO_IMAP:
-			process_smtp_ftp_pop_imap(packet, "Internet Message Access Protocol", "imap", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
-			break;
-    case PROTO_IMAPS:
-			// TODO: Call protocol tratment function
-			break;
-    case PROTO_POP3:
-			process_smtp_ftp_pop_imap(packet, "Post Office Protocol", "pop", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
-			break;
+    switch(destination) {
+      case PROTO_FTPC:
+        process_smtp_ftp_pop_imap(packet, "File Transfer Protocol", "ftp", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
+        break;
+      case PROTO_FTPD:
+        process_smtp_ftp_pop_imap(packet, "File Transfer Protocol", "ftp", next, dlen, TP_DATA | TP_CLIENT, verbosity);
+        break;
+      case PROTO_TELNET:
+  			process_telnet(packet, next, dlen, TP_CLIENT, verbosity);
+  			break;
+      case PROTO_SMTP:
+        process_smtp_ftp_pop_imap(packet, "Simple Mail Transfer Protocol", "smtp", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
+  			break;
+      case PROTO_HTTP:
+  			process_http(packet, next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
+  			break;
+      case PROTO_IMAP:
+  			process_smtp_ftp_pop_imap(packet, "Internet Message Access Protocol", "imap", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
+  			break;
+      case PROTO_POP3:
+  			process_smtp_ftp_pop_imap(packet, "Post Office Protocol", "pop", next, dlen, TP_COMMAND | TP_CLIENT, verbosity);
+  			break;
+      default:
+        break;
+    }
   }
 }
 
@@ -556,7 +518,7 @@ void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
       if(data->bp_vend[0] == magic[0] && data->bp_vend[1] == magic[1] && data->bp_vend[2] == magic[2] && data->bp_vend[3] == magic[3]) {
         u_int i = 4, temp = 0;
         u_int8_t overload = 0;
-        Bool overloaded = False;
+        bool overloaded = false;
 
         while(data->bp_vend[i] != TAG_END) {
           if(data->bp_vend[i] == TAG_PAD)
@@ -565,14 +527,14 @@ void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
             temp = i + data->bp_vend[i + 1] + 2;
           if(data->bp_vend[i] == TAG_OPT_OVERLOAD) {
             overload = data->bp_vend[i + 2];
-            overloaded = True;
+            overloaded = true;
           }
-          process_bootp_vsopt(data->bp_vend, i, (overloaded ? False : (data->bp_vend[temp] == TAG_END)), verbosity);
+          process_bootp_vsopt(data->bp_vend, i, (overloaded ? false : (data->bp_vend[temp] == TAG_END)), verbosity);
           i = temp;
         }
 
         u_int8_t * array = NULL;
-        Bool iterate = False;
+        bool iterate = false;
 
         switch(overload) {
           case 1:
@@ -582,7 +544,7 @@ void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
             break;
           case 3:
             array = data->bp_file;
-            iterate = True;
+            iterate = true;
             break;
           default:
             break;
@@ -596,7 +558,7 @@ void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
               temp = i + 1;
             else
               temp = i + array[i + 1] + 2;
-            process_bootp_vsopt(array, i, (iterate ? False : (array[temp] == TAG_END)), verbosity);
+            process_bootp_vsopt(array, i, (iterate ? false : (array[temp] == TAG_END)), verbosity);
             i = temp;
           }
           if(iterate) {
@@ -626,7 +588,7 @@ void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
   }
 }
 
-void process_bootp_vsopt(u_int8_t value[], u_int offset, Bool last, u_char verbosity) {
+void process_bootp_vsopt(u_int8_t value[], u_int offset, bool last, u_char verbosity) {
   u_int8_t type = value[offset];
   u_int8_t length = 0;
   if(type != TAG_PAD) {
@@ -854,7 +816,8 @@ void process_smtp_ftp_pop_imap(const u_char * packet, char * lo_protocol, char *
   u_char * data = (u_char *) (packet + offset);
   char * source = (flags & TP_CLIENT) ? "client" : "server",
     * destination = (flags & TP_CLIENT) ? "server" : "client";
-  bool is_command = flags & TP_COMMAND, is_reply = flags & TP_REPLY;
+  bool is_command = flags & TP_COMMAND,
+    is_reply = flags & TP_REPLY;
 
   if(is_command && is_reply)
     failwith("Unexpected flags combination");
@@ -883,7 +846,8 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
   char * data = (char *) (packet + offset);
   char * source = (flags & TP_CLIENT) ? "client" : "server",
     * destination = (flags & TP_CLIENT) ? "server" : "client";
-  bool is_command = flags & TP_COMMAND, is_reply = flags & TP_REPLY;
+  bool is_command = flags & TP_COMMAND,
+    is_reply = flags & TP_REPLY;
   char * request = NULL,
     * method = NULL,
     * uri = NULL,
@@ -918,14 +882,13 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
     if(request == NULL)
       failwith("Failed to reserve memory for HTTP request string");
 
-    for(i = 0; i < (headers - data); i++)
+    for(i = 0; i < headers_length; i++)
       request[i] = data[i];
 
-    request[(headers - data)] = '\0';
+    request[headers_length] = '\0';
 
     uri = strchr(request, 0x20);
-
-    method_length = uri - request - 1;
+    method_length = uri - request;
 
     if(uri != NULL && method_length > 0) {
       validated = true;
@@ -975,8 +938,7 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
     if(version == NULL)
       failwith("Failed to parse HTTP request string");
 
-    link_length = version - uri - 1;
-
+    link_length = version - uri;
     link = (char *) malloc((link_length + 1) * sizeof(char));
 
     if(link == NULL)
@@ -987,8 +949,7 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
 
     link[link_length] = '\0';
 
-    release_length = headers - (data + method_length + link_length);
-
+    release_length = headers - (data + method_length + link_length + 2);
     release = (char *) malloc((release_length + 1) * sizeof(char));
 
     if(release == NULL)
@@ -1025,7 +986,7 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
         printf("          └─ \"HTTP request from %s to %s\"\n", source, destination);
         printf("            ├─ Method: %s\n", method);
         printf("            ├─ Unique Resource Identifier (URI): %s\n", link);
-        printf("            ├─ Version: %s", release);
+        printf("            ├─ Version: %s\n", release);
         printf("            %s─ Headers:\n", (is_post ? "├" : "└"));
         int i = 0, last = -3;
         bool stop = false;
@@ -1051,7 +1012,7 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
         printf("          └─ \"HTTP response from %s to %s\"\n", source, destination);
         printf("            ├─ Version: %s\n", method);
         printf("            ├─ Code: %s\n", link);
-        printf("            ├─ Phrase: %s", release);
+        printf("            ├─ Phrase: %s\n", release);
         printf("            ├─ Headers:\n");
         int i = 0, last = -3;
         bool stop = false;
@@ -1338,16 +1299,20 @@ void process_dns(const u_char * packet, long int offset, u_short length, u_char 
       printf("            ├─ Number of question entries: %u\n", q_count);
       printf("            ├─ Number of answer entries: %u\n", ans_count);
       printf("            ├─ Number of authority entries: %u\n", auth_count);
+#if __EXTENDED_DNS == true
       printf("            ├─ Number of resource entries: %u\n", res_count);
       u_char * data = ((u_char *) header) + sizeof(struct dns);
       u_short counts[] = { q_count, ans_count, auth_count, res_count };
       process_dns_sections(data, counts, (u_char *) header);
+#else
+      printf("            └─ Number of resource entries: %u\n", res_count);
+#endif
       break;
   }
-
   printf("\n");
 }
 
+#if __EXTENDED_DNS == true
 void process_dns_sections(u_char * data, u_short counts[], u_char * beginning) {
   int position = 0,
     general = 0,
@@ -1476,3 +1441,4 @@ int print_dns_simple(u_char * data, int start_at) {
   }
   return i;
 }
+#endif
