@@ -34,11 +34,15 @@ pcap_t * get_online_capture(char * device, char * filter) {
 
 	pcap_t * capture = pcap_open_live(dev, MAX_SNAPSHOT_LENGTH, 0, 0, errbuf);
 	if(capture == NULL) {
-		fprintf(stderr, "Could not open live capture on device '%s': %s\n", dev, errbuf);
+		fprintf(stderr, "Could not open live capture on device '%s': %s\n", device, errbuf);
 		return NULL;
 	}
 
 	printf("Capture created for device: %s\n", dev);
+
+  if(filter != NULL) {
+    set_filter(capture, filter, device, errbuf);
+  }
 
 	return capture;
 }
@@ -159,6 +163,37 @@ void got_packet(u_char * args, const struct pcap_pkthdr * header, const u_char *
 }
 
 int init_capture(pcap_t * capture, int nb_packets, u_char verbosity) {
-	printf("Starting pcap loop with verbosity level set to %c\n", verbosity);
+	printf("Starting pcap loop with verbosity level set to %c\n\n", verbosity);
 	return pcap_loop(capture, nb_packets, got_packet, &verbosity);
+}
+
+void set_filter(pcap_t * capture, char * filter, char * device, char * errbuf) {
+  if(capture == NULL)
+    failwith("Failed to set given filter! Capture cannot be NULL");
+
+  if(filter == NULL)
+    failwith("Failed to set given filter! Filter string cannot be empty nor NULL");
+
+  if(device == NULL)
+    failwith("Failed to set given filter! Device name cannot be empty nor NULL");
+
+  struct bpf_program fltr;
+  bpf_u_int32 subnet_mask, ip;
+
+  if(pcap_lookupnet(device, &ip, &subnet_mask, errbuf) == -1) {
+    fprintf(stderr, "Could not get network information for device '%s': %s\n", device, errbuf);
+    exit(EXIT_FAILURE);
+  }
+
+  if(pcap_compile(capture, &fltr, filter, 0, ip) == -1) {
+    fprintf(stderr, "Could not compile provided filter! Check your syntax, plase: %s\n", pcap_geterr(capture));
+    exit(EXIT_FAILURE);
+  }
+
+  if(pcap_setfilter(capture, &fltr) == -1) {
+    fprintf(stderr, "Could not set compiled filter: %s\n", pcap_geterr(capture));
+    exit(EXIT_FAILURE);
+  }
+
+  printf("Filter '%s' set for live capture on device %s\n", filter, device);
 }
