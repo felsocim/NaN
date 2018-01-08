@@ -1337,7 +1337,61 @@ void process_dns(const u_char * packet, long int offset, u_short length, u_char 
       printf("            ├─ Number of answer entries: %u\n", ans_count);
       printf("            ├─ Number of authority entries: %u\n", auth_count);
       printf("            ├─ Number of resource entries: %u\n", res_count);
-      printf("            └─ Options:\n");
+      u_char * data = ((u_char *) header) + sizeof(struct dns);
+      int c = 0, i = 0, j = 0;
+      if(q_count > 0) {
+        printf("            ├─ Questions section: ");
+        for(c = 0; c < q_count; c++) {
+          while(data[i] != 0) {
+            if(i > 0)
+              printf(".");
+            for(j = i + 1; j < i + data[i] + 1; j++) {
+              printc(data[j]);
+            }
+            i += data[i] + 1;
+          }
+          i++;
+          printf(", QTYPE %u, QCLASS %u;", ntohs(DESERIALIZE_UINT8TO16(data, i)), ntohs(DESERIALIZE_UINT8TO16(data, i + 2)));
+          i += 4;
+        }
+        printf("\n");
+      }
+      if(ans_count > 0) {
+        int temp = i;
+        printf("            ├─ Answers section: ");
+        for(c = 0; c < ans_count; c++) {
+          u_int16_t offset = ntohs(DESERIALIZE_UINT8TO16(data, i));
+          printf("OLDOFFSET=%x\n", offset);
+          bool is_compressed = (offset & DNS_OFFSET_FLAG);
+          if(is_compressed) {
+            offset &= DNS_OFFSET_MASK;
+            printf("OFFSET=%u\n", offset);
+            i = offset - ((u_int16_t) sizeof(struct dns));
+            printf("NEWi=%d\n", i);
+          }
+          while(data[i] != 0) {
+            if(i > 0)
+              printf(".");
+            for(j = i + 1; j < i + data[i] + 1; j++) {
+              printc(data[j]);
+            }
+            i += data[i] + 1;
+          }
+          i = temp + 2;
+          u_int16_t rdlength = ntohs(DESERIALIZE_UINT8TO16(data, i + 8));
+          printf(", QTYPE %u, QCLASS %u, TTL %u, RDLENGTH %u, ",
+            ntohs(DESERIALIZE_UINT8TO16(data, i)),
+            ntohs(DESERIALIZE_UINT8TO16(data, i + 2)),
+            ntohl(DESERIALIZE_UINT8TO32(data, i + 4)),
+            rdlength
+          );
+          for(j = i + 10; j < i + 10 + rdlength; j++)
+            printc(data[j]);
+          i += 10 + rdlength;
+        }
+        printf("\n");
+      }
+      //printf("            └─ Options:\n");
       break;
   }
 
