@@ -1307,6 +1307,32 @@ void process_dns(const u_char * packet, long int offset, u_short length, u_char 
           break;
       }
       printf("            ├─ Flags: %s\n", dns_flags);
+      if(header->qr) {
+        printf("            ├─ Response code: ");
+        switch (header->rcode) {
+          case DNS_RCODE_NO_ERROR_CONDITION:
+            printf("No error condition\n");
+            break;
+          case DNS_RCODE_FORMAT_ERROR:
+            printf("Format error\n");
+            break;
+          case DNS_RCODE_SERVER_FAILURE:
+            printf("Server failure\n");
+            break;
+          case DNS_RCODE_NAME_ERROR:
+            printf("Name error\n");
+            break;
+          case DNS_RCODE_NOT_IMPLEMENTED:
+            printf("Not implemented\n");
+            break;
+          case DNS_RCODE_REFUSED:
+            printf("Refused\n");
+            break;
+          default:
+            printf("N/A\n");
+            break;
+        }
+      }
       printf("            ├─ Number of question entries: %u\n", q_count);
       printf("            ├─ Number of answer entries: %u\n", ans_count);
       printf("            ├─ Number of authority entries: %u\n", auth_count);
