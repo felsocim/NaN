@@ -969,14 +969,24 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
     case VERBOSITY_LOW:
       printf("http %s > %s ", source, destination);
       if(validated)
-        printf("method %s, version %s\n", method, release);
+        printf("%s %s, %s %s",
+          (is_command ? "method" : "version"),
+          method,
+          (is_command ? "version" : "phrase"),
+          release
+        );
       else
         printf("raw data segment");
       break;
     case VERBOSITY_MEDIUM:
       printf("http %s > %s ", source, destination);
       if(validated)
-        printf("method %s, uri %s, version %s\n", method, link, release);
+        printf("%s %s, %s %s, %s %s",
+          (is_command ? "method" : "version"),
+          method, (is_command ? "uri" : "code"),
+          link, (is_command ? "version" : "phrase"),
+          release
+        );
       else
         printf("raw data segment");
       break;
@@ -1042,6 +1052,15 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
     default:
       failwith("Unknown verbosity level detected");
   }
+
+  if(request != NULL)
+    free(request);
+  if(method != NULL)
+    free(method);
+  if(link != NULL)
+    free(link);
+  if(release != NULL)
+    free(release);
 }
 
 void process_telnet(const u_char * packet, long int offset, u_short length, u_char flags, u_char verbosity) {
@@ -1252,10 +1271,10 @@ void process_dns(const u_char * packet, long int offset, u_short length, u_char 
 
   switch (verbosity) {
     case VERBOSITY_LOW:
-      printf("dns %s %s > %s id %u\n", (header->qr ? "response" : "query"), source, destination, id);
+      printf("dns %s %s > %s id %u", (header->qr ? "response" : "query"), source, destination, id);
       break;
     case VERBOSITY_MEDIUM:
-      printf("dns %s %s > %s [%s] id %u\n", (header->qr ? "response" : "query"), source, destination, dns_flags, id);
+      printf("dns %s %s > %s [%s] id %u", (header->qr ? "response" : "query"), source, destination, dns_flags, id);
       break;
     case VERBOSITY_HIGH:
       printf("          └─ \"Domain Name System %s from %s to %s\"\n", (header->qr ? "response" : "query"), source, destination);

@@ -52,7 +52,7 @@ int main(int argc, char ** argv)
 				trace = strcpy(trace, optarg);
 				break;
 			case 'f':
-				filter = (char *) malloc(strlen(optarg) * sizeof(char));
+				filter = (char *) malloc((strlen(optarg) + 1) * sizeof(char));
 				filter = strcpy(filter, optarg);
 				break;
 			case 'v':
