@@ -12,6 +12,3 @@ obj/*
 
 # Build files
 *-build-*
-
-# Documentation
-doc/*
