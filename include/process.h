@@ -112,5 +112,8 @@ void process_smtp_ftp_pop_imap(const u_char *, char *, char *, long int, u_short
 void process_http(const u_char *, long int, u_short, u_char, u_char);
 void process_telnet(const u_char *, long int, u_short, u_char, u_char);
 void process_dns(const u_char *, long int, u_short, u_char, u_char);
+void process_dns_sections(u_char *, u_short[], u_char *);
+int print_dns_section_entry(u_char *, int);
+int print_dns_simple(u_char *, int);
 
 #endif // __PROCESS_H

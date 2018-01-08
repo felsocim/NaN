@@ -26,6 +26,8 @@ struct dns
     unsigned short res_count; // number of resource entries
 };
 
+#define DNS_HEADER_LENGTH ((int) sizeof(struct dns))
+
 #define DNS_OPCODE_QUERY 0
 #define DNS_OPCODE_IQUERY 1
 #define DNS_OPCODE_STATUS 2
@@ -37,7 +39,6 @@ struct dns
 #define DNS_RCODE_NOT_IMPLEMENTED 4
 #define DNS_RCODE_REFUSED 5
 
-#define DNS_OFFSET_FLAG 0b1100000000000000
 #define DNS_OFFSET_MASK 0b0011111111111111
 
 #endif // __DNS_H

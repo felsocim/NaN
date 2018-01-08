@@ -160,6 +160,8 @@ void process_arp(const u_char * packet, Bool reverse, u_char verbosity) {
         hw_source = strcpy(hw_source, ether_ntoa((struct ether_addr *) header->arp_sha));
         hw_destination = strcpy(hw_destination, ether_ntoa((struct ether_addr *) header->arp_tha));
 
+        // TODO: Check if it is IPv4 (see ARP header)
+
         u_int32_t ips = DESERIALIZE_UINT32(header->arp_spa);
         u_int32_t ipd = DESERIALIZE_UINT32(header->arp_tpa);
 
@@ -1338,62 +1340,139 @@ void process_dns(const u_char * packet, long int offset, u_short length, u_char 
       printf("            ├─ Number of authority entries: %u\n", auth_count);
       printf("            ├─ Number of resource entries: %u\n", res_count);
       u_char * data = ((u_char *) header) + sizeof(struct dns);
-      int c = 0, i = 0, j = 0;
-      if(q_count > 0) {
-        printf("            ├─ Questions section: ");
-        for(c = 0; c < q_count; c++) {
-          while(data[i] != 0) {
-            if(i > 0)
-              printf(".");
-            for(j = i + 1; j < i + data[i] + 1; j++) {
-              printc(data[j]);
-            }
-            i += data[i] + 1;
-          }
-          i++;
-          printf(", QTYPE %u, QCLASS %u;", ntohs(DESERIALIZE_UINT8TO16(data, i)), ntohs(DESERIALIZE_UINT8TO16(data, i + 2)));
-          i += 4;
-        }
-        printf("\n");
-      }
-      if(ans_count > 0) {
-        int temp = i;
-        printf("            ├─ Answers section: ");
-        for(c = 0; c < ans_count; c++) {
-          u_int16_t offset = ntohs(DESERIALIZE_UINT8TO16(data, i));
-          printf("OLDOFFSET=%x\n", offset);
-          bool is_compressed = (offset & DNS_OFFSET_FLAG);
-          if(is_compressed) {
-            offset &= DNS_OFFSET_MASK;
-            printf("OFFSET=%u\n", offset);
-            i = offset - ((u_int16_t) sizeof(struct dns));
-            printf("NEWi=%d\n", i);
-          }
-          while(data[i] != 0) {
-            if(i > 0)
-              printf(".");
-            for(j = i + 1; j < i + data[i] + 1; j++) {
-              printc(data[j]);
-            }
-            i += data[i] + 1;
-          }
-          i = temp + 2;
-          u_int16_t rdlength = ntohs(DESERIALIZE_UINT8TO16(data, i + 8));
-          printf(", QTYPE %u, QCLASS %u, TTL %u, RDLENGTH %u, ",
-            ntohs(DESERIALIZE_UINT8TO16(data, i)),
-            ntohs(DESERIALIZE_UINT8TO16(data, i + 2)),
-            ntohl(DESERIALIZE_UINT8TO32(data, i + 4)),
-            rdlength
-          );
-          for(j = i + 10; j < i + 10 + rdlength; j++)
-            printc(data[j]);
-          i += 10 + rdlength;
-        }
-        printf("\n");
-      }
-      //printf("            └─ Options:\n");
+      u_short counts[] = { q_count, ans_count, auth_count, res_count };
+      process_dns_sections(data, counts, (u_char *) header);
       break;
   }
 
   printf("\n");
+}
+
+void process_dns_sections(u_char * data, u_short counts[], u_char * beginning) {
+  int position = 0,
+    general = 0,
+    counter = 0,
+    measure = -2;
+  u_int16_t offset = 0;
+  bool compressed = false;
+  for(general = 0; general < 4; general++) {
+    switch (general) {
+      case 0:
+        printf("            ├─ Questions section: \n");
+        break;
+      case 1:
+        printf("            ├─ Answers section: \n");
+        break;
+      case 2:
+        printf("            ├─ Authorities section: \n");
+        break;
+      case 3:
+        printf("            └─ Resources section: \n");
+        break;
+      default:
+        failwith("Undefined DNS section type detected");
+    }
+    if(counts[general] < 1)
+      printf("            %s    (empty)\n", (general < 3 ? "│" : " "));
+
+    for(counter = 0; counter < counts[general]; counter++) {
+      printf("            %s    ", (general < 3 ? "│" : " "));
+      while(data[position] != 0) {
+        offset = ntohs(DESERIALIZE_UINT8TO16(data, position));
+        compressed = (offset >> 14) == 0b11;
+        if(compressed) {
+          offset &= DNS_OFFSET_MASK;
+          print_dns_section_entry(beginning, offset);
+          position += 2;
+        } else {
+          position = print_dns_section_entry(data, position);
+        }
+      }
+
+      if(!compressed) position++;
+
+      u_int16_t type = ntohs(DESERIALIZE_UINT8TO16(data, position));
+
+      printf(", QTYPE %x, QCLASS %x%s",
+        type,
+        ntohs(DESERIALIZE_UINT8TO16(data, position + 2)),
+        (general > 0 ? ", " : ";\n")
+      );
+
+      position += 4;
+
+      if(general > 0) {
+        u_int16_t rdlength = ntohs(DESERIALIZE_UINT8TO16(data, position + 4));
+        printf("TTL %u, RDLENGTH %u, DATA ",
+          ntohl(DESERIALIZE_UINT8TO32(data, position)),
+          rdlength
+        );
+
+        position += 6;
+
+        int limit = rdlength + position;
+        measure = position - 2;
+        compressed = false;
+
+        while(position < limit) {
+          if(position - measure == 2) {
+            offset = ntohs(DESERIALIZE_UINT8TO16(data, position));
+            measure = position;
+            compressed = (offset >> 14) == 0b11 && (type == 15 || type == 16);
+          }
+          if(compressed) {
+            offset &= DNS_OFFSET_MASK;
+            print_dns_section_entry(beginning, offset);
+            position += 2;
+          } else {
+            printc(data[position]);
+            position++;
+          }
+        }
+        printf(";\n");
+      }
+    }
+  }
+}
+
+int print_dns_section_entry(u_char * data, int start_at) {
+  int i = start_at,
+    former = 0,
+    temp = 0;
+  u_int16_t offset = 0;
+  bool compressed = false;
+  while(data[i] != 0) {
+    if(i > start_at)
+      printf(".");
+    offset = ntohs(DESERIALIZE_UINT8TO16(data, i));
+    compressed = (offset >> 14) == 0b11;
+    if(compressed) {
+      offset &= DNS_OFFSET_MASK;;
+      former = i;
+      i = offset;
+    }
+    temp = print_dns_simple(data, i);
+    if(compressed) {
+      i = former + 2;
+    } else {
+      i = temp;
+    }
+  }
+  return i;
+}
+
+int print_dns_simple(u_char * data, int start_at) {
+  int i = start_at, j = 0;
+  bool once = false;
+  while(data[i] != 0 && !once) {
+    if(i > start_at)
+      printf(".");
+    for(j = i + 1; j < i + data[i] + 1; j++) {
+      printc(data[j]);
+    }
+    i += data[i] + 1;
+    if(start_at > DNS_HEADER_LENGTH)
+      once = true;
+  }
+  return i;
 }
