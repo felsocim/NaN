@@ -7,18 +7,19 @@
 #define VERBOSITY_MEDIUM 0x32
 #define VERBOSITY_HIGH 0x33
 
+// ARP message types and macro
 #define ARP_REQUEST 0
 #define ARP_REPLY 1
 #define ARP_UNKNOWN 2
 #define ARP_GET_TYPE(_OP_CODE) ((_OP_CODE == ARPOP_REQUEST || _OP_CODE == ARPOP_RREQUEST) ? ARP_REQUEST : ((_OP_CODE == ARPOP_REPLY || _OP_CODE == ARPOP_RREPLY) ? ARP_REPLY : ARP_UNKNOWN))
 
+// Protocol identifiers
 #define PROTO_TCP 0x06
 #define PROTO_UDP 0x11
-#define PROTO_SCTP 0x84
 
+// Protocol ports
 #define PROTO_FTPC 21
 #define PROTO_FTPD 20
-#define PROTO_SSH 22
 #define PROTO_TELNET 23
 #define PROTO_SMTP 25
 #define PROTO_DNS 53
@@ -26,12 +27,9 @@
 #define PROTO_BOOTPC 68
 #define PROTO_HTTP 80
 #define PROTO_IMAP 143
-#define PROTO_IMAP3 220
-#define PROTO_IMAPS 993
-#define PROTO_POP2 109
 #define PROTO_POP3 110
-#define PROTO_POPS 995
 
+// TCP options
 #define TCPOPT_EOL 0
 #define TCPOPT_NOP 1
 #define TCPOPT_MSS 2
@@ -39,6 +37,7 @@
 #define TCPOPT_SACK 4
 #define TCPOPT_TSTMP 8
 
+// Shared flags
 #define TP_COMMAND 0x1
 #define TP_REPLY 0x2
 #define TP_DATA 0x4
@@ -48,6 +47,7 @@
 #define HTTP_VALID_METHODS_ARRAY { "OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT" }
 #define HTTP_VALID_METHODS_COUNT 8
 
+// Telnet control characters
 #define TELNETCTC_NOP 241
 #define TELNETCTC_DM 242
 #define TELNETCTC_IP 244
@@ -64,6 +64,7 @@
 #define TELNETCTC_DONT 254
 #define TELNETCTC_IAC 255
 
+// Telnet options
 #define TELNETOPT_ECHO 1
 #define TELNETOPT_SUPPRESS_GO_AHEAD 3
 #define TELNETOPT_STATUS 5
@@ -79,6 +80,8 @@
 #define TELNETOPT_ENCRYPTION_OPTION 38
 #define TELNETOPT_NEW_ENVIRONMENT_VARIABLES 39
 
+// Set this value to 'true' to enable extended DNS packet analysis in high verbosity mode
+// WARNING: This capability is disabled by default as its result may contain some mistakes
 #define __EXTENDED_DNS false
 
 #include <net/ethernet.h>

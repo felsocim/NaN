@@ -8,6 +8,9 @@
 
 #define MAC_ADDRESS_LENGTH 17
 
+// Macros used to deserialze 8 bit arrays to 16 or 32 values
+// NOTE: An offset greater than 0 may be specified in order to start from
+//       a specified position in given 8 bit array
 #if __BYTE_ORDER == __LITTLE_ENDIAN
   #define DESERIALIZE_UINT8TO32(_UINT8_ARRAY, OFFSET) (0x0 | _UINT8_ARRAY[OFFSET + 3] << 24 | _UINT8_ARRAY[OFFSET + 2] << 16 | _UINT8_ARRAY[OFFSET + 1] << 8 | _UINT8_ARRAY[OFFSET + 0])
   #define DESERIALIZE_UINT8TO16(_UINT8_ARRAY, OFFSET) (0x0 | _UINT8_ARRAY[OFFSET + 1] << 8 | _UINT8_ARRAY[OFFSET + 0])

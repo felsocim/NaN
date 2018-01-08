@@ -1,5 +1,6 @@
 #include "../include/useful.h"
 
+// Converts an IP address to string
 char * iptos(struct in_addr * address) {
   char * addr = (char *) malloc((INET_ADDRSTRLEN + 1) * sizeof(char));
   if(addr == NULL)
@@ -9,6 +10,7 @@ char * iptos(struct in_addr * address) {
   return addr;
 }
 
+// Converts a MAC address to string
 char * mactos(struct ether_addr * address) {
   char * addr = (char *) malloc((MAC_ADDRESS_LENGTH + 1) * sizeof(char));
   if(addr == NULL)
@@ -19,6 +21,7 @@ char * mactos(struct ether_addr * address) {
   return addr;
 }
 
+// Extracts and displays a list of IP adresses from a data array
 void list_ip(u_int8_t size, u_int8_t values[], u_int start_at) {
   int i = 0;
   struct in_addr addr;
@@ -36,6 +39,7 @@ bool is_printable(u_char __c) {
   return (__c > 31 && __c < 127);
 }
 
+// Prints a character if it's printable, prints a point otherwise (or nothing if it is a '\r' or a '\n')
 void printc(u_char __c) {
   if(__c == 0xA || __c == 0xD)
     return;
@@ -46,6 +50,7 @@ void printc(u_char __c) {
     printf(".");
 }
 
+// Prints a binary data line respecting 80th column limit
 void printdl(u_char buffer[], int begin_at, int end_before, int padding) {
   int i = 0, count = 0;
   printf("%*c", padding, ' ');

@@ -40,10 +40,12 @@ struct dns
 
 #define DNS_HEADER_LENGTH ((int) sizeof(struct dns))
 
+// Operation codes
 #define DNS_OPCODE_QUERY 0
 #define DNS_OPCODE_IQUERY 1
 #define DNS_OPCODE_STATUS 2
 
+// Response codes
 #define DNS_RCODE_NO_ERROR_CONDITION 0
 #define DNS_RCODE_FORMAT_ERROR 1
 #define DNS_RCODE_SERVER_FAILURE 2

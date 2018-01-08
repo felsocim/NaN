@@ -8,7 +8,11 @@
 #include <unistd.h>
 #include <stdbool.h>
 
+// Should hold a help message string which will be displayed anytime the 'help'
+// option is present
 extern char * help_message;
+// Should hold a usage message string which will be displayed anytime the
+// application encounters a syntax error on startup
 extern char * usage_message;
 
 void failwith(const char * message);

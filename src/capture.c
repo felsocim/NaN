@@ -1,5 +1,6 @@
 #include "../include/capture.h"
 
+// Creates a live capture instance for given device and filter (if specified)
 pcap_t * get_online_capture(char * device, char * filter) {
 	char * dev = NULL;
 	char errbuf[PCAP_ERRBUF_SIZE];
@@ -47,6 +48,7 @@ pcap_t * get_online_capture(char * device, char * filter) {
 	return capture;
 }
 
+// Creates an offline capture instance for given trace file
 pcap_t * get_offline_capture(char * trace) {
 	char errbuf[PCAP_ERRBUF_SIZE];
 
@@ -61,6 +63,7 @@ pcap_t * get_offline_capture(char * trace) {
 	return capture;
 }
 
+// Routine called anytime a packet is captured
 void got_packet(u_char * args, const struct pcap_pkthdr * header, const u_char * packet) {
 	// Ethernet header parsing
 	const struct ether_header * ethernet = (struct ether_header *) (packet);
@@ -162,11 +165,13 @@ void got_packet(u_char * args, const struct pcap_pkthdr * header, const u_char *
     printf("\n");
 }
 
+// Runs capture
 int init_capture(pcap_t * capture, int nb_packets, u_char verbosity) {
 	printf("Starting pcap loop with verbosity level set to %c\n\n", verbosity);
 	return pcap_loop(capture, nb_packets, got_packet, &verbosity);
 }
 
+// Applies a filter to the given capture
 void set_filter(pcap_t * capture, char * filter, char * device, char * errbuf) {
   if(capture == NULL)
     failwith("Failed to set given filter! Capture cannot be NULL");

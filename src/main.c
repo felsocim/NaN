@@ -5,6 +5,7 @@ char * usage_message = "Arguments mismatch!\nUsage: %s -i <interface> | -o <trac
 
 pcap_t * capture = NULL;
 
+// Function called on interrupt signal detection
 void finish(int signum) {
 	if(capture != NULL) {
 		printf("\nCapture halt.\n");
@@ -15,6 +16,7 @@ void finish(int signum) {
 	printf("Closing without capture.");
 }
 
+// Main routine
 int main(int argc, char ** argv)
 {
 	char * interface = NULL, * trace = NULL, * filter = NULL;
@@ -23,6 +25,7 @@ int main(int argc, char ** argv)
 	struct sigaction close;
   sigset_t set;
 
+  // Capture interrupt signal
   sigemptyset(&set);
 	close.sa_handler = finish;
   close.sa_flags = SA_NODEFER;
@@ -31,6 +34,7 @@ int main(int argc, char ** argv)
 	if(sigaction(SIGINT, &close, NULL) != 0)
 		failwith("Failed to set close signal");
 
+  // Parse command line options and values
 	while((c = getopt(argc, argv, "i:o:f:v:h")) != EOF) {
 		switch(c) {
 			case 'i':
@@ -88,6 +92,7 @@ int main(int argc, char ** argv)
 		capture = get_offline_capture(trace);
 	}
 
+  // Launch capture
   if(capture != NULL) {
 	  switch(init_capture(capture, NUMBER_OF_PACKETS, verbosity)) {
 		  case 0:
@@ -105,6 +110,7 @@ int main(int argc, char ** argv)
 	  }
   }
 
+  // Free used resources
   pcap_close(capture);
 	if(interface != NULL)
 		free(interface);

@@ -60,6 +60,7 @@ void process_ipv4(const u_char * packet, u_char verbosity) {
       failwith("Unknown verbosity level detected");
   }
 
+  // Process transport layer protocols
   switch(header->ip_p) {
     case PROTO_TCP:
       process_tcp(packet, false, ntohs(header->ip_len) - sizeof(struct ip), verbosity);
@@ -114,6 +115,7 @@ void process_ipv6(const u_char * packet, u_char verbosity) {
       failwith("Unknown verbosity level detected");
   }
 
+  // Process transport layer protocols
   switch(header->ip6_nxt) {
     case PROTO_TCP:
       process_tcp(packet, true, ntohs(header->ip6_plen) - sizeof(struct ip6_hdr), verbosity);
@@ -140,6 +142,7 @@ void process_arp(const u_char * packet, bool reverse, u_char verbosity) {
   switch(ntohs(header->arp_hrd)) {
     case ARPHRD_ETHER: // Ethernet type address resolution packet
       if(ntohs(header->arp_pro) == ETHERTYPE_IP || ARP_GET_TYPE(operation) == ARP_UNKNOWN) {
+        // Addresses extraction
         char * hw_source = (char *) malloc((MAC_ADDRESS_LENGTH + 1) * sizeof(char));
         char * hw_destination = (char *) malloc((MAC_ADDRESS_LENGTH + 1) * sizeof(char));
 
@@ -173,6 +176,7 @@ void process_arp(const u_char * packet, bool reverse, u_char verbosity) {
       	if(inet_ntop(AF_INET, &s_ipd, ip_destination, INET_ADDRSTRLEN) == NULL)
       		failwith("Failed to convert destination IP address to string");
 
+        // Display packet information
         switch(verbosity) {
           case VERBOSITY_LOW:
             if(ARP_GET_TYPE(operation) == ARP_REQUEST)
@@ -226,6 +230,7 @@ void process_udp(const u_char * packet, bool ipv6, u_char verbosity) {
 	// UDP header parsing
 	const struct udphdr * header = (struct udphdr *) (packet + sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)));
 
+  // Extract header information
   u_int16_t source = ntohs(header->source),
     destination = ntohs(header->dest),
     length = ntohs(header->len),
@@ -233,6 +238,7 @@ void process_udp(const u_char * packet, bool ipv6, u_char verbosity) {
 
   u_short dlen = length - 8;
 
+  // Display packet information
   switch(verbosity) {
     case VERBOSITY_LOW:
       printf("udp src %u, dst %u%c", source, destination, (dlen > 0 ? ' ' : '\n'));
@@ -249,6 +255,7 @@ void process_udp(const u_char * packet, bool ipv6, u_char verbosity) {
       failwith("Unknown verbosity level detected");
   }
 
+  // Process application layer protocols if any data is present
   if(dlen > 0) {
     long int next = sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + sizeof(struct udphdr);
     bool bootp = false, unknown = false;
@@ -290,6 +297,7 @@ void process_tcp(const u_char * packet, bool ipv6, u_short length, u_char verbos
 	// TCP header parsing
 	const struct tcphdr * header = (struct tcphdr *) (packet + sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)));
 
+  // Extract header information
   u_int16_t source = ntohs(header->th_sport),
     destination = ntohs(header->th_dport);
 
@@ -304,6 +312,7 @@ void process_tcp(const u_char * packet, bool ipv6, u_short length, u_char verbos
 
   u_short dlen = length - (offset * 4);
 
+  // Display packet information
   switch(verbosity) {
     case VERBOSITY_LOW:
       printf("tcp src %u, dst %u, ack %u%c", source, destination, acknowledgement, (dlen > 1 ? ' ' : '\n'));
@@ -337,6 +346,7 @@ void process_tcp(const u_char * packet, bool ipv6, u_short length, u_char verbos
 
       printf("\n");
 
+      // Extract TCP options (if any)
       if(offset > 5) {
         printf("        └─ Options: ");
         u_char * options = ((u_char *) header) + 20;
@@ -381,6 +391,7 @@ void process_tcp(const u_char * packet, bool ipv6, u_short length, u_char verbos
       failwith("Unknown verbosity level detected");
   }
 
+  // Process application layer protocols if any data is present
   if(dlen > 0) {
     long int next = sizeof(struct ether_header) + (ipv6 ? sizeof(struct ip6_hdr) : sizeof(struct ip)) + (offset * 4);
     bool unknown = false;
@@ -452,6 +463,7 @@ void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
     * giaddr = NULL,
     * chaddr = NULL;
 
+  // Display packet information
   switch(verbosity) {
     case VERBOSITY_LOW:
       printf("bootp op %u server %s, file %s\n", data->bp_op, data->bp_sname, data->bp_file);
@@ -460,6 +472,7 @@ void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
       printf("bootp transaction 0x%X, op %u server %s, file %s, started %u sec(s) ago\n", ntohs(data->bp_xid), data->bp_op, data->bp_sname, data->bp_file, ntohs(data->bp_secs));
       break;
     case VERBOSITY_HIGH:
+      // Adresses extraction
       ciaddr = (char *) malloc((INET_ADDRSTRLEN + 1) * sizeof(char));
 
       if(ciaddr == NULL)
@@ -519,6 +532,7 @@ void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
 
       u_int8_t magic[4] = VM_RFC1048;
 
+      // Process vendor specific data (if any)
       if(data->bp_vend[0] == magic[0] && data->bp_vend[1] == magic[1] && data->bp_vend[2] == magic[2] && data->bp_vend[3] == magic[3]) {
         u_int i = 4, temp = 0;
         u_int8_t overload = 0;
@@ -583,6 +597,7 @@ void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
 
       printf("\n");
 
+      // Free used memory
       free(ciaddr);
       free(yiaddr);
       free(siaddr);
@@ -592,6 +607,7 @@ void process_bootp(const u_char * packet, long int offset, u_char verbosity) {
   }
 }
 
+// Process BOOTP vendor specific data
 void process_bootp_vsopt(u_int8_t value[], u_int offset, bool last, u_char verbosity) {
   u_int8_t type = value[offset];
   u_int8_t length = 0;
@@ -783,22 +799,24 @@ void process_bootp_vsopt(u_int8_t value[], u_int offset, bool last, u_char verbo
         }
       }
       break;
-    default:
+    default: // If an unknown data field is detected, print its value, length and binary data
       printf("unknown(%u, %u, ", type, length);
       int j = 0;
       for(j = offset + 2; j < offset + 2 + length; j++) {
-        printf("%c", (value[j] > 31 && value[j] < 128 ? value[j] : '.'));
+        printf("%02x", value[j]);
       }
       printf(")");
       break;
   }
 
+  // If data is an IP address, call specific function
   if((type >= TAG_GATEWAY && type <= TAG_RLP_SERVER) || type == TAG_SERVER_ID || type == TAG_SUBNET_MASK) {
     if(verbosity == VERBOSITY_HIGH)
       printf(" ");
       list_ip(length, value, offset + 2);
   }
 
+  // If data is a string, print it out
   if(type == TAG_HOSTNAME || type == TAG_TFTP_SERVER || type == TAG_BOOTFILENAME || type == TAG_MESSAGE || type == TAG_VENDOR_CLASS) {
     if(verbosity == VERBOSITY_HIGH) {
       char * name = (char *) malloc((length + 1) * sizeof(char));
@@ -826,6 +844,7 @@ void process_smtp_ftp_pop_imap(const u_char * packet, char * lo_protocol, char *
   if(is_command && is_reply)
     failwith("Unexpected flags combination");
 
+  // Display packet information
   switch (verbosity) {
     case VERBOSITY_LOW:
     case VERBOSITY_MEDIUM:
@@ -863,6 +882,7 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
   if(is_command && is_reply)
     failwith("Unexpected flags combination");
 
+  // Verify if a valid HTTP header is present
   bool validated = false;
 
   headers = strchr(data, '\n');
@@ -965,6 +985,8 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
     release[release_length] = '\0';
   }
 
+  // Display packet information (if a valid HTTP header is present its content
+  // will be parsed, raw data are shown/announced otherwise)
   switch (verbosity) {
     case VERBOSITY_LOW:
       printf("http %s > %s ", source, destination);
@@ -1005,6 +1027,7 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
         int i = 0, last = -3;
         bool stop = false;
         printf("            %s    ", (is_post ? "│" : " "));
+        // Process headers (if any)
         while(!stop) {
           if(headers[i] == '\n') {
             if(i - last < 3) {
@@ -1031,6 +1054,7 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
         int i = 0, last = -3;
         bool stop = false;
         printf("            │    ");
+        // Process headers (if any)
         while(!stop) {
           if(headers[i] == '\n') {
             if(i - last < 3) {
@@ -1053,6 +1077,7 @@ void process_http(const u_char * packet, long int offset, u_short length, u_char
       failwith("Unknown verbosity level detected");
   }
 
+  // Free used memory
   if(request != NULL)
     free(request);
   if(method != NULL)
@@ -1077,6 +1102,7 @@ void process_telnet(const u_char * packet, long int offset, u_short length, u_ch
 
   int i = 1, by = 0;
 
+  // Process Telnet packet and display its information
   switch (verbosity) {
     case VERBOSITY_LOW:
     case VERBOSITY_MEDIUM:
@@ -1091,11 +1117,11 @@ void process_telnet(const u_char * packet, long int offset, u_short length, u_ch
       if(optneg) {
         printf("            └─ Options:\n");
         while (i < length) {
-          if(data[i] == TELNETCTC_IAC) {
+          if(data[i] == TELNETCTC_IAC) { // Skip 'Interpret As Command'
             by = 1;
             printf("\n");
             last_opt = data[i];
-          } else if(last_opt == TELNETCTC_IAC) {
+          } else if(last_opt == TELNETCTC_IAC) { // If the last option was an IAC, internpret current option as control character
             switch(data[i]) {
               case TELNETCTC_NOP:
   							printf("                ─ No Operation\n");
@@ -1150,7 +1176,7 @@ void process_telnet(const u_char * packet, long int offset, u_short length, u_ch
               list = true;
             by = 1;
             last_opt = data[i];
-          } else if((suboption || list) && !label) {
+          } else if((suboption || list) && !label) { // Interpret suboption or option list
             switch(data[i]) {
               case TELNETOPT_ECHO:
   							printf("%secho%s", (suboption ? "                    ■ " : " "), (suboption ? " " : ""));
@@ -1204,7 +1230,7 @@ void process_telnet(const u_char * packet, long int offset, u_short length, u_ch
               label = true;
             by = 1;
             last_opt = data[i];
-          } else if(suboption && label) {
+          } else if(suboption && label) { // Interpret suboption or option value(s)
             if(last_opt == TELNETOPT_TERMINAL_TYPE || last_opt == TELNETOPT_X_DISPLAY_LOCATION) {
               if(data[i] == 1)
                 printf("VALUE REQUEST ");
@@ -1242,11 +1268,13 @@ void process_dns(const u_char * packet, long int offset, u_short length, u_char 
   struct dns * header = (struct dns *) (packet + offset);
   char * source = (flags & TP_CLIENT) ? "client" : "server",
     * destination = (flags & TP_CLIENT) ? "server" : "client";
+  // Extract header information
   u_short id = ntohs(header->id),
     q_count = ntohs(header->q_count),
     ans_count = ntohs(header->ans_count),
     auth_count = ntohs(header->auth_count),
     res_count = ntohs(header->res_count);
+  // Process DNS flags
   char dns_flags[9] = "--------\0";
 
   if(header->aa) {
@@ -1269,6 +1297,7 @@ void process_dns(const u_char * packet, long int offset, u_short length, u_char 
     dns_flags[7] = 'A';
   }
 
+  // Extract and display packet information
   switch (verbosity) {
     case VERBOSITY_LOW:
       printf("dns %s %s > %s id %u", (header->qr ? "response" : "query"), source, destination, id);
@@ -1324,12 +1353,12 @@ void process_dns(const u_char * packet, long int offset, u_short length, u_char 
       printf("            ├─ Number of question entries: %u\n", q_count);
       printf("            ├─ Number of answer entries: %u\n", ans_count);
       printf("            ├─ Number of authority entries: %u\n", auth_count);
-#if __EXTENDED_DNS == true
+#if __EXTENDED_DNS == true // Launch extended DNS packet information extraction (not fully functional) if the required macro is set to 'true'
       printf("            ├─ Number of resource entries: %u\n", res_count);
       u_char * data = ((u_char *) header) + sizeof(struct dns);
       u_short counts[] = { q_count, ans_count, auth_count, res_count };
       process_dns_sections(data, counts, (u_char *) header);
-#else
+#else // Finish information processing otherwise
       printf("            └─ Number of resource entries: %u\n", res_count);
 #endif
       break;
@@ -1337,14 +1366,15 @@ void process_dns(const u_char * packet, long int offset, u_short length, u_char 
   printf("\n");
 }
 
-#if __EXTENDED_DNS == true
+#if __EXTENDED_DNS == true // DNS extended information extraction related functions
+// Porcess all DNS sections
 void process_dns_sections(u_char * data, u_short counts[], u_char * beginning) {
   int position = 0,
     general = 0,
     counter = 0,
     measure = -2;
   u_int16_t offset = 0;
-  bool compressed = false;
+  bool compressed = false; // Used for pointer data detection
   for(general = 0; general < 4; general++) {
     switch (general) {
       case 0:
@@ -1425,6 +1455,7 @@ void process_dns_sections(u_char * data, u_short counts[], u_char * beginning) {
   }
 }
 
+// Process one specific DNS packet section entry
 int print_dns_section_entry(u_char * data, int start_at) {
   int i = start_at,
     former = 0,
@@ -1451,6 +1482,7 @@ int print_dns_section_entry(u_char * data, int start_at) {
   return i;
 }
 
+// Simply print consecutive bytes in a DNS message
 int print_dns_simple(u_char * data, int start_at) {
   int i = start_at, j = 0;
   bool once = false;
