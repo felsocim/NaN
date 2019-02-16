@@ -1,17 +1,19 @@
 # NaN : Network Analyzer
 
-Projet d'analyseur réseau fonctionnant en ligne de commande réalisé dans le cadre du cours de **Transport et services réseaux** à l'Université de Strasbourg.
+Command-line network traffic analyzer
 
-## Auteur
+## About
 
-> **Marek Felsoci** : étudiant en M1 du Cursus Master en Ingénierie en informatique, systèmes et réseaux
+Developed as final assignment for our Network transport and services classes at the Universit of Strasbourg, this network traffic analyzer enables one to either capture live traffic from an actual network interface or from a PCAP capture file.
 
-## Protocoles implémentés
+It can provide information on a large variety of network protocols in three different verbosity levels.
 
-Le programme est capable d'extraire des informations des protocoles suivants :
+## Supported protocols
+
+The application supports extracting information on the following protocols:
 
 - Ethernet
-- IP (v4 et v6)
+- IP (v4 & v6)
 - ARP
 - UDP
 - TCP
@@ -22,40 +24,50 @@ Le programme est capable d'extraire des informations des protocoles suivants :
 - IMAP
 - HTTP
 - Telnet
-- DNS (Le code contient une extension de la fonction d'extraction d'informations mais comme elle présente des irrégularités à certains moments la portion du code qui lui correspond est désactivée par défaut. Il possible de l'activer en mettant la valeur de la macro **__EXTENDED_DNS** définie dans le fichier *include/process.h* à **true**)
+- DNS
 
-## Compilation
+Note that the source code contains contains an extended implementation of information extraction function for the DNS protocol. Nevertheless, this implementation can cause the application to crash in rare cases. Therefore, the corresponding portion of the source code has been deactivated by default. You can enable it for testing purposes by setting value of the macro **__EXTENDED_DNS** defined in file *include/process.h* to **true**.
 
-Pour pouvoir compiler le programme il faut avoir installé la librairie 'pcap' sur le système. Le paquet correspondant est *libpcap0.8-dev* installable depuis le dépôt de logiciels d'Ubuntu ou autre distribution de Linux.
+## Build
 
-La compilation en elle-même se fait via le fichier *makefile* présent dans la racine du projet.
+In order to be able to build the application from its sources, it is necessary to install the PCAP library on your system. It can be done by firing the following command (for Debian-based Linux distributions only) : `sudo apt install libpcap0.8-dev`. 
 
-Une fois compilé, le binaire *analyzer* est créé dans le dossier *bin*.
+Then, build the application using provided *Makefile*.
 
-## Lancement et options
+The binary will be placed into **bin** folder under project's root and will be called **analyzer**.
 
-L'analyseur dispose des options suivantes :
+## Usage
 
-- **-i <interface>** : lancer une capture en temps réel sur une interface valide
-- **-o <fichier de capture>** : lancer une capture hors ligne en se basant sur un fichier de capture valide
-- **-f <filtre>** : (optionnelle) appliquer un filtre valide à une capture en temps réel
-- **-v <niveau>** : définir le niveau de verbosité du programme de 1 à 3 (du moins au plus verbeux)
-- **-h** : afficher l'aide
+The analyzer provides the following options:
 
-Notez que les options **-i** et **-o** ne peuvent pas être utilisées au même temps !
+| Option          | Description                                                              |
+| --------------- | ------------------------------------------------------------------------ |
+| -i `iname`      | launch live capture on the interface called `iname`                      |
+| -o `file`       | capture traffic from the specified `file` in offline mode                |
+| -f `expression` | apply filter described by the `expression` to a live capture             |
+| -v `level`      | define desired verbosity level from 1 (less verbose) to 3 (most verbose) |
+| -h              | show help                                                                |
 
-Voici dans la section suivante des aprçus du programme en utilisant différents niveaux de verbosité.
+Note that, the **-i** and **-o** options cannot be used simultaneously!
 
-## Aperçus
+## Screenshots
 
-**Verbosité faible**
+### Verbosity level 1
 
-![capture d'écran](doc/nan3.png)
+![Verbosity level 1](doc/nan3.png)
 
-**Verbosité moyenne**
+### Verbosity level 2
 
-![capture d'écran](doc/nan2.png)
+![Verbosity level 2](doc/nan2.png)
 
-**Verbosité maximale**
+### Verbosity level 3
 
-![capture d'écran](doc/nan1.png)
+![Verbosity level 3](doc/nan1.png)
+
+## Author
+
+[Marek Felsoci](mailto:marek.felsoci@etu.unistra.fr), student at the [University of Strasbourg](http://www.unistra.fr).
+
+## License
+
+This project is licensed uder the terms of the GNU General Public License version 2. See the [LICENSE](LICENSE) file for the full license text.
